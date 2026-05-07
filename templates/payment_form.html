@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Registrar Pago{% endblock %}
+{% block content %}
+<h2>Registrar Pago de Mensualidad</h2>
+<div class="card" style="max-width: 500px;">
+    <form method="post">
+        <div class="form-group">
+            <label>Cliente *</label>
+            <select name="client_id" required>
+                <option value="">Seleccionar cliente</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}">{{ c.first_name }} {{ c.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Mes *</label>
+                <input type="month" name="month" value="{{ current_month }}" required>
+            </div>
+            <div class="form-group">
+                <label>Monto</label>
+                <input type="number" step="0.01" name="amount" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Fecha de Pago</label>
+                <input type="date" name="payment_date" value="{{ current_month }}-01">
+            </div>
+            <div class="form-group">
+                <label>Método</label>
+                <select name="method">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="pago_movil">Pago Móvil</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notas</label>
+            <textarea name="notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn">Registrar Pago</button>
+        <a href="{{ url_for('finances') }}" class="btn" style="background: #64748b;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

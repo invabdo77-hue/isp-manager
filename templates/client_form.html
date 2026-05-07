@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if client else 'Nuevo' }} Cliente{% endblock %}
+{% block content %}
+<h2>{{ 'Editar' if client else 'Nuevo' }} Cliente</h2>
+<div class="card" style="max-width: 800px;">
+    <form method="post">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" name="first_name" value="{{ client.first_name if client else '' }}" required>
+            </div>
+            <div class="form-group">
+                <label>Apellido *</label>
+                <input type="text" name="last_name" value="{{ client.last_name if client else '' }}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Cédula</label>
+                <input type="text" name="cedula" value="{{ client.cedula if client else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" name="phone" value="{{ client.phone if client else '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" value="{{ client.email if client else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Dirección</label>
+            <input type="text" name="address" value="{{ client.address if client else '' }}">
+        </div>
+        <h3 style="margin: 20px 0 10px; color: #475569;">Datos del Router</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Modelo del Router</label>
+                <input type="text" name="router_model" value="{{ client.router_model if client else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Serial del Router</label>
+                <input type="text" name="router_serial" value="{{ client.router_serial if client else '' }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>MAC del Router</label>
+                <input type="text" name="router_mac" value="{{ client.router_mac if client else '' }}">
+            </div>
+            <div class="form-group">
+                <label>IP</label>
+                <input type="text" name="ip_address" value="{{ client.ip_address if client else '' }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Número de NAP</label>
+                <input type="text" name="nap_number" value="{{ client.nap_number if client else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Potencia</label>
+                <input type="text" name="potencia" value="{{ client.potencia if client else '' }}">
+            </div>
+        </div>
+        <h3 style="margin: 20px 0 10px; color: #475569;">Plan</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Plan Contratado</label>
+                <select name="plan_id">
+                    <option value="">Sin plan</option>
+                    {% for p in plans %}
+                    <option value="{{ p.id }}" {{ 'selected' if client and client.plan_id == p.id else '' }}>{{ p.name }} - {{ p.speed }} (${{ p.price }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Estado</label>
+                <select name="connection_status">
+                    <option value="active" {{ 'selected' if client and client.connection_status == 'active' else '' }}>Activo</option>
+                    <option value="cut" {{ 'selected' if client and client.connection_status == 'cut' else '' }}>Cortado</option>
+                    <option value="suspended" {{ 'selected' if client and client.connection_status == 'suspended' else '' }}>Suspendido</option>
+                    <option value="inactive" {{ 'selected' if client and client.connection_status == 'inactive' else '' }}>Inactivo</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn">{{ 'Actualizar' if client else 'Crear' }} Cliente</button>
+        <a href="{{ url_for('clients_list') }}" class="btn" style="background: #64748b;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

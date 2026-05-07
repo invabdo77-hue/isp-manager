@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Historial de Pagos - {{ client.first_name }} {{ client.last_name }}{% endblock %}
+{% block content %}
+<h2>Historial de Pagos - {{ client.first_name }} {{ client.last_name }}</h2>
+<div class="card">
+    {% if payments %}
+    <table>
+        <thead>
+            <tr>
+                <th>Mes</th>
+                <th>Monto</th>
+                <th>Método</th>
+                <th>Fecha de Pago</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+            <tr>
+                <td>{{ p.month }}</td>
+                <td>${{ "%.2f"|format(p.amount) }}</td>
+                <td>{{ p.method }}</td>
+                <td>{{ p.payment_date[:10] }}</td>
+                <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #64748b;">No hay pagos registrados.</p>
+    {% endif %}
+    <a href="{{ url_for('clients_list') }}" class="btn" style="margin-top: 16px;">Volver a Clientes</a>
+</div>
+{% endblock %}

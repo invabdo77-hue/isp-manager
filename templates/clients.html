@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Clientes - ISP Manager{% endblock %}
+{% block content %}
+<div class="header">
+    <h2>Clientes</h2>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('export_clients') }}" class="btn btn-success">📥 Exportar Excel</a>
+        {% if current_user.role == 'admin' %}
+        <form action="{{ url_for('import_clients') }}" method="POST" enctype="multipart/form-data" style="display: inline;">
+            <label class="btn btn-warning" style="cursor: pointer;">📤 Importar Excel
+                <input type="file" name="file" accept=".xlsx" onchange="this.form.submit()" style="display: none;">
+            </label>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('client_new') }}" class="btn">+ Nuevo Cliente</a>
+    </div>
+</div>
+<div class="card">
+    {% if clients %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
+                <th>Plan</th>
+                <th>IP</th>
+                <th>NAP</th>
+                <th>Estado</th>
+                <th style="text-align: center;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in clients %}
+            <tr>
+                <td style="font-weight: 500;">{{ c.first_name }} {{ c.last_name }}</td>
+                <td>{{ c.cedula or '-' }}</td>
+                <td>{{ c.phone or '-' }}</td>
+                <td>{{ c.plan_name or 'Sin plan' }}</td>
+                <td>{{ c.ip_address or '-' }}</td>
+                <td>{{ c.nap_number or '-' }}</td>
+                <td><span class="badge badge-{{ c.connection_status }}">{{ c.connection_status }}</span></td>
+                <td>
+                    <div class="actions" style="justify-content: center;">
+                        <a href="{{ url_for('client_edit', id=c.id) }}" class="btn btn-sm btn-warning">Editar</a>
+                        <a href="{{ url_for('client_payments', id=c.id) }}" class="btn btn-sm btn-success">Pagos</a>
+                        <form method="post" action="{{ url_for('client_delete', id=c.id) }}" style="display:inline;" onsubmit="return confirm('¿Eliminar este cliente?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 60px; color: #64748b;">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" style="margin-bottom: 16px;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <p style="font-size: 1.1rem; margin-bottom: 16px;">No hay clientes registrados</p>
+        <a href="{{ url_for('client_new') }}" class="btn">Agregar Primer Cliente</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

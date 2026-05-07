@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Nueva Factura{% endblock %}
+{% block content %}
+<h2>Nueva Factura</h2>
+<div class="card" style="max-width: 600px;">
+    <form method="post">
+        <div class="form-group">
+            <label>Cliente *</label>
+            <select name="client_id" required>
+                <option value="">Seleccionar cliente</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Período Inicio</label>
+                <input type="date" name="period_start" value="{{ today }}">
+            </div>
+            <div class="form-group">
+                <label>Período Fin</label>
+                <input type="date" name="period_end">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Monto</label>
+                <input type="number" step="0.01" name="amount" placeholder="Se toma del plan por defecto">
+            </div>
+            <div class="form-group">
+                <label>Fecha Vencimiento</label>
+                <input type="date" name="due_date">
+            </div>
+        </div>
+        <button type="submit" class="btn">Crear Factura</button>
+        <a href="{{ url_for('invoices_list') }}" class="btn" style="background: #64748b;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

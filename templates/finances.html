@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Finanzas - ISP Manager{% endblock %}
+{% block content %}
+<div class="header">
+    <h2>Finanzas</h2>
+    <div style="display: flex; gap: 12px;">
+        <a href="{{ url_for('export_finances') }}" class="btn btn-success">📥 Exportar Excel</a>
+        <a href="{{ url_for('payment_new') }}" class="btn btn-success">+ Pagar Mensualidad</a>
+        <a href="{{ url_for('income_new') }}" class="btn">+ Ingreso</a>
+        <a href="{{ url_for('expense_new') }}" class="btn btn-danger">+ Gasto</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="value">${{ "%.2f"|format(total_monthly) }}</div>
+        <div class="label">Mensualidades</div>
+        <div class="icon" style="background: rgba(99, 102, 241, 0.1);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+    </div>
+    <div class="stat-card success">
+        <div class="value" style="color: #10b981;">${{ "%.2f"|format(total_other_incomes) }}</div>
+        <div class="label">Otros Ingresos</div>
+        <div class="icon" style="background: rgba(16, 185, 129, 0.1);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+    </div>
+    <div class="stat-card danger">
+        <div class="value" style="color: #ef4444;">${{ "%.2f"|format(total_expenses) }}</div>
+        <div class="label">Gastos</div>
+        <div class="icon" style="background: rgba(239, 68, 68, 0.1);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 010 7h5a3.5 3.5 0 000 7H6"/></svg>
+        </div>
+    </div>
+    <div class="stat-card {{ 'success' if balance >= 0 else 'danger' }}">
+        <div class="value" style="color: {{ '#10b981' if balance >= 0 else '#ef4444' }};">${{ "%.2f"|format(balance) }}</div>
+        <div class="label">Balance</div>
+        <div class="icon" style="background: rgba({{ '16, 185, 129' if balance >= 0 else '239, 68, 68' }}, 0.1);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ '#10b981' if balance >= 0 else '#ef4444' }}" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div class="card">
+        <h3 style="margin-bottom: 20px; font-size: 1.2rem; font-weight: 600;">Ingresos vs Gastos</h3>
+        <div class="chart-container">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3 style="margin-bottom: 20px; font-size: 1.2rem; font-weight: 600;">Por Categoría</h3>
+        <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 20px; font-size: 1.2rem; font-weight: 600;">Pagos de Mensualidades</h3>
+    {% if monthly_payments %}
+    <table>
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Mes</th>
+                <th>Monto</th>
+                <th>Método</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in monthly_payments[:15] %}
+            <tr>
+                <td style="font-weight: 500;">{{ p.first_name }} {{ p.last_name }}</td>
+                <td>{{ p.month }}</td>
+                <td style="color: #10b981; font-weight: 600;">${{ "%.2f"|format(p.amount) }}</td>
+                <td>{{ p.method }}</td>
+                <td style="color: #64748b;">{{ p.payment_date[:10] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #64748b; padding: 20px; text-align: center;">No hay pagos registrados.</p>
+    {% endif %}
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div class="card">
+        <h3 style="margin-bottom: 20px; font-size: 1.2rem; font-weight: 600;">Otros Ingresos</h3>
+        {% if other_incomes %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in other_incomes[:8] %}
+                <tr>
+                    <td>{{ i.description }}</td>
+                    <td><span class="badge badge-active">{{ i.category }}</span></td>
+                    <td style="color: #10b981; font-weight: 600;">${{ "%.2f"|format(i.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #64748b; text-align: center; padding: 20px;">No hay otros ingresos.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card">
+        <h3 style="margin-bottom: 20px; font-size: 1.2rem; font-weight: 600;">Gastos</h3>
+        {% if expenses %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in expenses[:8] %}
+                <tr>
+                    <td>{{ e.description }}</td>
+                    <td><span class="badge badge-inactive">{{ e.category }}</span></td>
+                    <td style="color: #ef4444; font-weight: 600;">${{ "%.2f"|format(e.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #64748b; text-align: center; padding: 20px;">No hay gastos.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const mainChart = new Chart(document.getElementById('mainChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Mensualidades', 'Otros Ingresos', 'Gastos'],
+            datasets: [{
+                data: [{{ total_monthly }}, {{ total_other_incomes }}, {{ total_expenses }}],
+                backgroundColor: ['#6366f1', '#10b981', '#ef4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+    
+    const categoryData = {
+        {% for ic in income_by_category %}'{{ ic.category }}': {{ ic.total }},{% endfor %}
+    };
+    const categoryLabels = Object.keys(categoryData);
+    const categoryValues = Object.values(categoryData);
+    
+    if (categoryLabels.length > 0) {
+        const catChart = new Chart(document.getElementById('categoryChart'), {
+            type: 'bar',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    label: 'Ingresos',
+                    data: categoryValues,
+                    backgroundColor: '#6366f1',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

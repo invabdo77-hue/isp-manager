@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ISP Manager{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --success: #10b981;
+            --success-dark: #059669;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --warning: #f59e0b;
+            --info: #06b6d4;
+            --dark: #1e293b;
+            --dark-light: #334155;
+            --gray: #64748b;
+            --light: #f1f5f9;
+            --white: #ffffff;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --card-shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: var(--dark); line-height: 1.6; }
+        
+        .sidebar { 
+            position: fixed; left: 0; top: 0; bottom: 0; width: 260px; 
+            background: var(--bg-gradient); color: white; padding: 25px 0; z-index: 100;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+        }
+        .sidebar h1 { font-size: 1.5rem; padding: 0 25px 25px; font-weight: 700; letter-spacing: -0.5px; }
+        .sidebar nav a { 
+            display: flex; align-items: center; gap: 12px; padding: 14px 25px; 
+            color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s;
+            font-weight: 500;
+        }
+        .sidebar nav a:hover { background: rgba(255,255,255,0.15); color: white; }
+        .sidebar nav a.active { background: rgba(255,255,255,0.2); color: white; border-left: 4px solid white; }
+        .sidebar nav a svg { width: 20px; height: 20px; }
+        
+        .main { margin-left: 260px; padding: 30px 40px; min-height: 100vh; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
+        .header h2 { font-size: 2rem; font-weight: 700; color: var(--dark); }
+        
+        .btn { 
+            display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; 
+            background: var(--primary); color: white; border: none; border-radius: 10px; 
+            cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+        .btn:hover { 
+            background: var(--primary-dark); transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+        .btn:active { transform: translateY(0); }
+        .btn-success { background: var(--success); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }
+        .btn-success:hover { background: var(--success-dark); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
+        .btn-danger { background: var(--danger); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
+        .btn-danger:hover { background: var(--danger-dark); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5); }
+        .btn-warning { background: var(--warning); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); }
+        .btn-warning:hover { background: #d97706; }
+        .btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+        
+        .card { 
+            background: white; border-radius: 16px; padding: 28px; 
+            box-shadow: var(--card-shadow); margin-bottom: 24px;
+            transition: all 0.3s;
+        }
+        .card:hover { box-shadow: var(--card-shadow-hover); }
+        
+        .stats { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+            gap: 24px; margin-bottom: 35px; 
+        }
+        .stat-card { 
+            background: white; border-radius: 16px; padding: 24px; 
+            box-shadow: var(--card-shadow); position: relative; overflow: hidden;
+            transition: all 0.3s;
+        }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--primary);
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); }
+        .stat-card.success::before { background: var(--success); }
+        .stat-card.danger::before { background: var(--danger); }
+        .stat-card.warning::before { background: var(--warning); }
+        .stat-card.info::before { background: var(--info); }
+        .stat-card .value { font-size: 2.2rem; font-weight: 700; color: var(--dark); }
+        .stat-card .label { color: var(--gray); font-size: 0.9rem; font-weight: 500; margin-top: 4px; }
+        .stat-card .icon {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            width: 50px; height: 50px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { 
+            background: #f8fafc; font-weight: 600; color: var(--gray); 
+            font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        th:first-child { border-radius: 12px 0 0 0; }
+        th:last-child { border-radius: 0 12px 0 0; }
+        tr { transition: all 0.2s; }
+        tr:hover { background: #f8fafc; }
+        tr:last-child td:first-child { border-radius: 0 0 0 12px; }
+        tr:last-child td:last-child { border-radius: 0 0 12px 0; }
+        
+        .badge { 
+            display: inline-block; padding: 6px 14px; border-radius: 20px; 
+            font-size: 0.8rem; font-weight: 600; 
+        }
+        .badge-active, .badge-paid { background: #d1fae5; color: #065f46; }
+        .badge-suspended, .badge-overdue { background: #fef3c7; color: #92400e; }
+        .badge-inactive, .badge-cancelled { background: #fee2e2; color: #991b1b; }
+        .badge-cut { background: #ef4444; color: white; }
+        .badge-pending { background: #e0e7ff; color: #3730a3; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { 
+            display: block; margin-bottom: 8px; font-weight: 600; 
+            color: var(--dark-light); font-size: 0.9rem; 
+        }
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; padding: 14px 16px; border: 2px solid #e2e8f0; 
+            border-radius: 10px; font-size: 0.95rem; transition: all 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
+            outline: none; border-color: var(--primary); 
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); 
+        }
+        
+        .flash { 
+            padding: 16px 20px; border-radius: 12px; margin-bottom: 24px;
+            font-weight: 500; animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .flash-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .flash-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        
+        .actions { display: flex; gap: 10px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        .chart-container { position: relative; height: 300px; margin-top: 20px; }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .sidebar h1, .sidebar nav a span { display: none; }
+            .main { margin-left: 70px; padding: 20px; }
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h1>ISP Manager</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' else '' }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('clients_list') }}" class="{{ 'active' if 'client' in (request.endpoint or '') else '' }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                <span>Clientes</span>
+            </a>
+            <a href="{{ url_for('plans_list') }}" class="{{ 'active' if 'plan' in (request.endpoint or '') else '' }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <span>Planes</span>
+            </a>
+            <a href="{{ url_for('finances') }}" class="{{ 'active' if 'finance' in (request.endpoint or '') else '' }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                <span>Finanzas</span>
+            </a>
+        </nav>
+        <div style="position: absolute; bottom: 25px; left: 25px; right: 25px;">
+            <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px;">
+                <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">Usuario</div>
+                <div style="font-weight: 600; font-size: 1rem;">
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.role == 'admin' %}👑 Admin{% else %}🔧 Técnico{% endif %}: {{ current_user.username }}
+                        <a href="{{ url_for('logout') }}" style="color: white; font-size: 0.8rem; margin-left: 10px;">(Salir)</a>
+                    {% else %}
+                        Invitado
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </aside>
+    <main class="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

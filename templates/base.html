@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}ISP Manager{% endblock %}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -10,198 +10,246 @@
         :root {
             --primary: #6366f1;
             --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
             --success: #10b981;
-            --success-dark: #059669;
             --danger: #ef4444;
-            --danger-dark: #dc2626;
             --warning: #f59e0b;
-            --info: #06b6d4;
             --dark: #1e293b;
-            --dark-light: #334155;
             --gray: #64748b;
             --light: #f1f5f9;
             --white: #ffffff;
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            --card-shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: var(--dark); line-height: 1.6; }
         
-        .sidebar { 
-            position: fixed; left: 0; top: 0; bottom: 0; width: 260px; 
-            background: var(--bg-gradient); color: white; padding: 25px 0; z-index: 100;
-            box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .sidebar h1 { font-size: 1.5rem; padding: 0 25px 25px; font-weight: 700; letter-spacing: -0.5px; }
-        .sidebar nav a { 
-            display: flex; align-items: center; gap: 12px; padding: 14px 25px; 
-            color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s;
+        .navbar h1 { font-size: 1.2rem; font-weight: 700; }
+        .navbar .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            bottom: 0;
+            width: 260px;
+            background: linear-gradient(180deg, #667eea 0%, #5a5fd8 100%);
+            color: white;
+            padding: 20px 0;
+            z-index: 999;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar.open { transform: translateX(0); }
+        
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
             font-weight: 500;
+            border-left: 3px solid transparent;
         }
-        .sidebar nav a:hover { background: rgba(255,255,255,0.15); color: white; }
-        .sidebar nav a.active { background: rgba(255,255,255,0.2); color: white; border-left: 4px solid white; }
-        .sidebar nav a svg { width: 20px; height: 20px; }
+        .sidebar nav a:hover, .sidebar nav a.active {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-left-color: white;
+        }
+        .sidebar nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
         
-        .main { margin-left: 260px; padding: 30px 40px; min-height: 100vh; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
-        .header h2 { font-size: 2rem; font-weight: 700; color: var(--dark); }
+        .sidebar .user-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .sidebar .user-info .name { font-weight: 600; font-size: 0.9rem; }
+        .sidebar .user-info a { color: white; font-size: 0.8rem; opacity: 0.8; }
         
-        .btn { 
-            display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; 
-            background: var(--primary); color: white; border: none; border-radius: 10px; 
-            cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        .main { 
+            margin-top: 60px; 
+            padding: 20px; 
+            min-height: calc(100vh - 60px);
         }
-        .btn:hover { 
-            background: var(--primary-dark); transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .btn:active { transform: translateY(0); }
-        .btn-success { background: var(--success); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }
-        .btn-success:hover { background: var(--success-dark); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
-        .btn-danger { background: var(--danger); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
-        .btn-danger:hover { background: var(--danger-dark); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5); }
-        .btn-warning { background: var(--warning); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); }
-        .btn-warning:hover { background: #d97706; }
-        .btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+        .header h2 { font-size: 1.5rem; font-weight: 700; }
         
-        .card { 
-            background: white; border-radius: 16px; padding: 28px; 
-            box-shadow: var(--card-shadow); margin-bottom: 24px;
-            transition: all 0.3s;
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
         }
-        .card:hover { box-shadow: var(--card-shadow-hover); }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--warning); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
         
-        .stats { 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
-            gap: 24px; margin-bottom: 35px; 
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
         }
-        .stat-card { 
-            background: white; border-radius: 16px; padding: 24px; 
-            box-shadow: var(--card-shadow); position: relative; overflow: hidden;
-            transition: all 0.3s;
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
         }
         .stat-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
             background: var(--primary);
+            border-radius: 12px 0 0 12px;
         }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); }
         .stat-card.success::before { background: var(--success); }
         .stat-card.danger::before { background: var(--danger); }
-        .stat-card.warning::before { background: var(--warning); }
-        .stat-card.info::before { background: var(--info); }
-        .stat-card .value { font-size: 2.2rem; font-weight: 700; color: var(--dark); }
-        .stat-card .label { color: var(--gray); font-size: 0.9rem; font-weight: 500; margin-top: 4px; }
-        .stat-card .icon {
-            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-            width: 50px; height: 50px; border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(99, 102, 241, 0.1);
-        }
+        .stat-card .value { font-size: 1.5rem; font-weight: 700; }
+        .stat-card .label { color: var(--gray); font-size: 0.8rem; }
         
-        table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        th, td { padding: 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { 
-            background: #f8fafc; font-weight: 600; color: var(--gray); 
-            font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
         }
-        th:first-child { border-radius: 12px 0 0 0; }
-        th:last-child { border-radius: 0 12px 0 0; }
-        tr { transition: all 0.2s; }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; font-weight: 600; color: var(--gray); font-size: 0.75rem; text-transform: uppercase; }
         tr:hover { background: #f8fafc; }
-        tr:last-child td:first-child { border-radius: 0 0 0 12px; }
-        tr:last-child td:last-child { border-radius: 0 0 12px 0; }
         
-        .badge { 
-            display: inline-block; padding: 6px 14px; border-radius: 20px; 
-            font-size: 0.8rem; font-weight: 600; 
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
-        .badge-active, .badge-paid { background: #d1fae5; color: #065f46; }
-        .badge-suspended, .badge-overdue { background: #fef3c7; color: #92400e; }
-        .badge-inactive, .badge-cancelled { background: #fee2e2; color: #991b1b; }
+        .badge-active { background: #d1fae5; color: #065f46; }
         .badge-cut { background: #ef4444; color: white; }
-        .badge-pending { background: #e0e7ff; color: #3730a3; }
+        .badge-suspended { background: #fef3c7; color: #92400e; }
         
-        .form-group { margin-bottom: 20px; }
-        .form-group label { 
-            display: block; margin-bottom: 8px; font-weight: 600; 
-            color: var(--dark-light); font-size: 0.9rem; 
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
         }
-        .form-group input, .form-group select, .form-group textarea { 
-            width: 100%; padding: 14px 16px; border: 2px solid #e2e8f0; 
-            border-radius: 10px; font-size: 0.95rem; transition: all 0.3s;
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
-            outline: none; border-color: var(--primary); 
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); 
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
         }
         
-        .flash { 
-            padding: 16px 20px; border-radius: 12px; margin-bottom: 24px;
-            font-weight: 500; animation: slideIn 0.3s ease;
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .flash {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
         }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .flash-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
-        .flash-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .flash-success { background: #d1fae5; color: #065f46; }
+        .flash-error { background: #fee2e2; color: #991b1b; }
         
-        .actions { display: flex; gap: 10px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         
-        .chart-container { position: relative; height: 300px; margin-top: 20px; }
-        
-        input, select, textarea { font-size: 16px !important; -webkit-appearance: none; }
-        select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 35px; }
-        
-        .form-group input, .form-group select, .form-group textarea { padding: 12px; }
-        
-        .btn { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-        
-        table { -webkit-overflow-scrolling: touch; }
-        
-        .sidebar nav a { -webkit-tap-highlight-color: transparent; }
-        
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; height: auto; position: fixed; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; padding: 10px; justify-content: space-between; align-items: center; }
-            .sidebar h1 { display: none; }
-            .sidebar nav { display: flex; flex-wrap: wrap; gap: 5px; }
-            .sidebar nav a { padding: 8px 12px; font-size: 0.75rem; border-radius: 8px; }
-            .sidebar nav a span { display: inline; }
-            .sidebar .user-section { display: none; }
-            .main { margin-left: 0; margin-top: 60px; padding: 15px; }
-            .header { flex-direction: column; gap: 15px; align-items: flex-start; }
-            .header h2 { font-size: 1.5rem; }
-            .header > div { width: 100%; flex-wrap: wrap; gap: 8px; }
-            .header > div .btn { flex: 1; min-width: 100px; justify-content: center; }
-            .stats { grid-template-columns: 1fr; gap: 15px; }
-            .stat-card { padding: 15px; }
-            .stat-card .value { font-size: 1.5rem; }
-            table { font-size: 0.8rem; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            th, td { padding: 10px 5px; white-space: nowrap; }
-            .btn { padding: 10px 15px; font-size: 0.85rem; width: auto; }
+        @media (max-width: 480px) {
+            .stats { grid-template-columns: 1fr; }
             .form-row { grid-template-columns: 1fr; }
-            .card { padding: 15px; }
+            .header { flex-direction: column; align-items: stretch; }
+            .header > div { display: flex; flex-wrap: wrap; gap: 8px; }
+            .header .btn { flex: 1; justify-content: center; }
+            table { display: block; overflow-x: auto; }
+            th, td { white-space: nowrap; padding: 10px 6px; }
             .actions { flex-direction: column; }
             .actions a, .actions button { width: 100%; text-align: center; }
-            .badge { padding: 5px 10px; font-size: 0.7rem; }
         }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+        }
+        .overlay.show { display: block; }
     </style>
 </head>
 <body>
-    <aside class="sidebar">
+    <div class="navbar">
         <h1>ISP Manager</h1>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    </div>
+    
+    <div class="overlay" onclick="toggleMenu()"></div>
+    
+    <aside class="sidebar" id="sidebar">
         <nav>
             <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' else '' }}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                 <span>Dashboard</span>
             </a>
             <a href="{{ url_for('clients_list') }}" class="{{ 'active' if 'client' in (request.endpoint or '') else '' }}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <span>Clientes</span>
             </a>
             <a href="{{ url_for('plans_list') }}" class="{{ 'active' if 'plan' in (request.endpoint or '') else '' }}">
@@ -213,20 +261,20 @@
                 <span>Finanzas</span>
             </a>
         </nav>
-        <div class="user-section">
-            <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px;">
-                <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">Usuario</div>
-                <div style="font-weight: 600; font-size: 1rem;">
-                    {% if current_user.is_authenticated %}
-                        {% if current_user.role == 'admin' %}👑 Admin{% else %}🔧 Técnico{% endif %}: {{ current_user.username }}
-                        <a href="{{ url_for('logout') }}" class="btn-logout" style="color: white; font-size: 0.8rem; margin-left: 10px;">(Salir)</a>
-                    {% else %}
-                        Invitado
-                    {% endif %}
-                </div>
+        <div class="user-info">
+            <div class="name">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}👑 Admin{% else %}🔧 Técnico{% endif %}: {{ current_user.username }}
+                {% else %}
+                    Invitado
+                {% endif %}
             </div>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('logout') }}">Salir</a>
+            {% endif %}
         </div>
     </aside>
+    
     <main class="main">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -237,5 +285,12 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+    
+    <script>
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.querySelector('.overlay').classList.toggle('show');
+        }
+    </script>
 </body>
 </html>

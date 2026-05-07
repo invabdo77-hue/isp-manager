@@ -155,11 +155,40 @@
         
         .chart-container { position: relative; height: 300px; margin-top: 20px; }
         
+        input, select, textarea { font-size: 16px !important; -webkit-appearance: none; }
+        select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 35px; }
+        
+        .form-group input, .form-group select, .form-group textarea { padding: 12px; }
+        
+        .btn { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        
+        table { -webkit-overflow-scrolling: touch; }
+        
+        .sidebar nav a { -webkit-tap-highlight-color: transparent; }
+        
         @media (max-width: 768px) {
-            .sidebar { width: 70px; }
-            .sidebar h1, .sidebar nav a span { display: none; }
-            .main { margin-left: 70px; padding: 20px; }
-            .stats { grid-template-columns: 1fr; }
+            .sidebar { width: 100%; height: auto; position: fixed; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; padding: 10px; justify-content: space-between; align-items: center; }
+            .sidebar h1 { display: none; }
+            .sidebar nav { display: flex; flex-wrap: wrap; gap: 5px; }
+            .sidebar nav a { padding: 8px 12px; font-size: 0.75rem; border-radius: 8px; }
+            .sidebar nav a span { display: inline; }
+            .sidebar .user-section { display: none; }
+            .main { margin-left: 0; margin-top: 60px; padding: 15px; }
+            .header { flex-direction: column; gap: 15px; align-items: flex-start; }
+            .header h2 { font-size: 1.5rem; }
+            .header > div { width: 100%; flex-wrap: wrap; gap: 8px; }
+            .header > div .btn { flex: 1; min-width: 100px; justify-content: center; }
+            .stats { grid-template-columns: 1fr; gap: 15px; }
+            .stat-card { padding: 15px; }
+            .stat-card .value { font-size: 1.5rem; }
+            table { font-size: 0.8rem; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            th, td { padding: 10px 5px; white-space: nowrap; }
+            .btn { padding: 10px 15px; font-size: 0.85rem; width: auto; }
+            .form-row { grid-template-columns: 1fr; }
+            .card { padding: 15px; }
+            .actions { flex-direction: column; }
+            .actions a, .actions button { width: 100%; text-align: center; }
+            .badge { padding: 5px 10px; font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -184,13 +213,13 @@
                 <span>Finanzas</span>
             </a>
         </nav>
-        <div style="position: absolute; bottom: 25px; left: 25px; right: 25px;">
+        <div class="user-section">
             <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px;">
                 <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">Usuario</div>
                 <div style="font-weight: 600; font-size: 1rem;">
                     {% if current_user.is_authenticated %}
                         {% if current_user.role == 'admin' %}👑 Admin{% else %}🔧 Técnico{% endif %}: {{ current_user.username }}
-                        <a href="{{ url_for('logout') }}" style="color: white; font-size: 0.8rem; margin-left: 10px;">(Salir)</a>
+                        <a href="{{ url_for('logout') }}" class="btn-logout" style="color: white; font-size: 0.8rem; margin-left: 10px;">(Salir)</a>
                     {% else %}
                         Invitado
                     {% endif %}

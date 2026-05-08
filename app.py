@@ -665,28 +665,28 @@ def export_finances():
     response.headers['Content-Disposition'] = 'attachment; filename=finanzas.xlsx'
     return response
 
-if __name__ == '__main__':
+def initialize_app():
     import os
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if not DATABASE_URL:
         print("WARNING: DATABASE_URL not set!")
-        print("App will run but database functions will fail")
-    else:
-        print("Database configured, initializing...")
-        try:
-            init_db()
-            print("Database initialized successfully!")
-        except Exception as e:
-            print(f"Error initializing DB: {e}")
-        try:
-            create_default_users()
-            print("Users created successfully!")
-        except Exception as e:
-            print(f"Error creating users: {e}")
-        try:
-            check_and_cut_clients()
-        except Exception as e:
-            print(f"Error checking clients: {e}")
-    
+        return
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Error initializing DB: {e}")
+    try:
+        create_default_users()
+    except Exception as e:
+        print(f"Error creating users: {e}")
+    try:
+        check_and_cut_clients()
+    except Exception as e:
+        print(f"Error checking clients: {e}")
+
+initialize_app()
+
+if __name__ == '__main__':
+    import os
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)

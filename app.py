@@ -38,6 +38,13 @@ def require_admin(f):
     decorated_function.__name__ = f.__name__
     return decorated_function
 
+@app.route('/health')
+def health():
+    import os
+    if not os.environ.get('DATABASE_URL'):
+        return "Database not configured", 500
+    return "OK", 200
+
 @app.route('/')
 @login_required
 def index():
@@ -660,20 +667,26 @@ def export_finances():
 
 if __name__ == '__main__':
     import os
-    if 'DATABASE_URL' not in os.environ:
-        print("ERROR: DATABASE_URL not set!")
-        print("Please set DATABASE_URL environment variable")
-        exit(1)
-    try:
-        init_db()
-    except Exception as e:
-        print(f"Error initializing DB: {e}")
-    try:
-        create_default_users()
-    except Exception as e:
-        print(f"Error creating users: {e}")
-    try:
-        check_and_cut_clients()
-    except Exception as e:
-        print(f"Error checking clients: {e}")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if not DATABASE_URL:
+        print("WARNING: DATABASE_URL not set!")
+        print("App will run but database functions will fail")
+    else:
+        print("Database configured, initializing...")
+        try:
+            init_db()
+            print("Database initialized successfully!")
+        except Exception as e:
+            print(f"Error initializing DB: {e}")
+        try:
+            create_default_users()
+            print("Users created successfully!")
+        except Exception as e:
+            print(f"Error creating users: {e}")
+        try:
+            check_and_cut_clients()
+        except Exception as e:
+            print(f"Error checking clients: {e}")
+    
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

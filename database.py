@@ -4,17 +4,19 @@ import os
 from datetime import datetime
 from flask import g
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
 def get_db():
     if 'db' not in g:
-        sslmode = 'require'
-        if 'sslmode' not in DATABASE_URL:
-            if '?' in DATABASE_URL:
-                DATABASE_URL += '&sslmode=require'
-            else:
-                DATABASE_URL += '?sslmode=require'
-        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        if not DATABASE_URL:
+            raise Exception("DATABASE_URL not configured")
+        
+        url = DATABASE_URL
+        if 'sslmode' not in url.lower():
+            separator = '&' if '?' in url else '?'
+            url = f"{url}{separator}sslmode=require"
+        
+        g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
     return g.db
 
 def close_db(e=None):

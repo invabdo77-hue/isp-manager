@@ -1,9 +1,4 @@
 services:
-  - type: pserv
-    name: isp-manager-db
-    plan: free
-    postgresVersion: "16"
-    
   - type: web
     name: isp-manager
     env: python
@@ -12,7 +7,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.14"
-    databases:
-      - name: isp-manager-db
-        databaseName: isp_manager
-        user: isp_manager

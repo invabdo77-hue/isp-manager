@@ -666,25 +666,28 @@ def export_finances():
     return response
 
 def initialize_app():
-    import os
-    DATABASE_URL = os.environ.get('DATABASE_URL')
-    if not DATABASE_URL:
-        print("WARNING: DATABASE_URL not set!")
-        return
-    try:
-        init_db()
-    except Exception as e:
-        print(f"Error initializing DB: {e}")
-    try:
-        create_default_users()
-    except Exception as e:
-        print(f"Error creating users: {e}")
-    try:
-        check_and_cut_clients()
-    except Exception as e:
-        print(f"Error checking clients: {e}")
+    pass
 
-initialize_app()
+if __name__ == '__main__':
+    def initialize_app():
+        import os
+        DATABASE_URL = os.environ.get('DATABASE_URL')
+        if not DATABASE_URL:
+            print("WARNING: DATABASE_URL not set!")
+            return
+        try:
+            init_db()
+        except Exception as e:
+            print(f"Error initializing DB: {e}")
+        try:
+            create_default_users()
+        except Exception as e:
+            print(f"Error creating users: {e}")
+        try:
+            check_and_cut_clients()
+        except Exception as e:
+            print(f"Error checking clients: {e}")
+    initialize_app()
 
 if __name__ == '__main__':
     import os

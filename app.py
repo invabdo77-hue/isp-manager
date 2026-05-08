@@ -1,12 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from database import get_db, init_db, check_and_cut_clients, create_default_users
+from database import get_db, init_db, check_and_cut_clients, create_default_users, close_db
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 import calendar
 
 app = Flask(__name__)
 app.secret_key = 'isp_manager_secret_key_2024'
+app.teardown_appcontext(close_db)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -21,8 +22,9 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    db.close()
+    cur = db.cursor()
+    cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    user = cur.fetchone()
     if user:
         return User(user['id'], user['username'], user['role'])
     return None
@@ -40,16 +42,19 @@ def require_admin(f):
 @login_required
 def index():
     db = get_db()
-    total_clients = db.execute('SELECT COUNT(*) as count FROM clients').fetchone()['count']
-    active_clients = db.execute("SELECT COUNT(*) as count FROM clients WHERE connection_status = 'active'").fetchone()['count']
+    cur = db.cursor()
+    cur.execute('SELECT COUNT(*) as count FROM clients')
+    total_clients = cur.fetchone()['count']
+    cur.execute("SELECT COUNT(*) as count FROM clients WHERE connection_status = 'active'")
+    active_clients = cur.fetchone()['count']
     
-    recent_clients = db.execute('''
+    cur.execute('''
         SELECT c.*, p.name as plan_name, p.price as plan_price
         FROM clients c LEFT JOIN plans p ON c.plan_id = p.id
         ORDER BY c.registration_date DESC LIMIT 5
-    ''').fetchall()
+    ''')
+    recent_clients = cur.fetchall()
     
-    db.close()
     return render_template('index.html', 
                          total_clients=total_clients,
                          active_clients=active_clients,
@@ -61,8 +66,9 @@ def login():
         username = request.form['username']
         password = request.form['password']
         db = get_db()
-        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        db.close()
+        cur = db.cursor()
+        cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+        user = cur.fetchone()
         if user and check_password_hash(user['password'], password):
             login_user(User(user['id'], user['username'], user['role']))
             return redirect(url_for('index'))
@@ -79,12 +85,13 @@ def logout():
 @login_required
 def clients_list():
     db = get_db()
-    clients = db.execute('''
+    cur = db.cursor()
+    cur.execute('''
         SELECT c.*, p.name as plan_name, p.speed as plan_speed, p.price as plan_price
         FROM clients c LEFT JOIN plans p ON c.plan_id = p.id
         ORDER BY c.first_name || ' ' || c.last_name
-    ''').fetchall()
-    db.close()
+    ''')
+    clients = cur.fetchall()
     return render_template('clients.html', clients=clients)
 
 @app.route('/clients/new', methods=['GET', 'POST'])
@@ -140,17 +147,19 @@ def client_new():
             vals.append('active')
             cols.append('connection_status')
         
-        sql = 'INSERT INTO clients (' + ', '.join(cols) + ') VALUES (' + ','.join(['?']*len(cols)) + ')'
+        sql = 'INSERT INTO clients (' + ', '.join(cols) + ') VALUES (' + ','.join(['%s']*len(cols)) + ')'
         
-        db.execute(sql, vals)
+        cur = db.cursor()
+        cur.execute(sql, vals)
         db.commit()
         flash('Cliente creado exitosamente', 'success')
         if current_user.role == 'technician':
             return redirect(url_for('clients_list'))
         return redirect(url_for('clients_list'))
     
-    plans = db.execute('SELECT * FROM plans ORDER BY price').fetchall()
-    db.close()
+    cur = db.cursor()
+    cur.execute('SELECT * FROM plans ORDER BY price')
+    plans = cur.fetchall()
     return render_template('client_form.html', plans=plans, client=None)
 
 @app.route('/clients/<int:id>/edit', methods=['GET', 'POST'])
@@ -163,59 +172,62 @@ def client_edit(id):
         values = []
         
         if request.form.get('first_name'):
-            updates.append('first_name=?')
+            updates.append('first_name=%s')
             values.append(request.form.get('first_name'))
         if request.form.get('last_name'):
-            updates.append('last_name=?')
+            updates.append('last_name=%s')
             values.append(request.form.get('last_name'))
         if request.form.get('cedula'):
-            updates.append('cedula=?')
+            updates.append('cedula=%s')
             values.append(request.form.get('cedula'))
         if request.form.get('phone'):
-            updates.append('phone=?')
+            updates.append('phone=%s')
             values.append(request.form.get('phone'))
         if request.form.get('email'):
-            updates.append('email=?')
+            updates.append('email=%s')
             values.append(request.form.get('email'))
         if request.form.get('address'):
-            updates.append('address=?')
+            updates.append('address=%s')
             values.append(request.form.get('address'))
         if request.form.get('router_model'):
-            updates.append('router_model=?')
+            updates.append('router_model=%s')
             values.append(request.form.get('router_model'))
         if request.form.get('router_serial'):
-            updates.append('router_serial=?')
+            updates.append('router_serial=%s')
             values.append(request.form.get('router_serial'))
         if request.form.get('router_mac'):
-            updates.append('router_mac=?')
+            updates.append('router_mac=%s')
             values.append(request.form.get('router_mac'))
         if request.form.get('ip_address'):
-            updates.append('ip_address=?')
+            updates.append('ip_address=%s')
             values.append(request.form.get('ip_address'))
         if request.form.get('nap_number'):
-            updates.append('nap_number=?')
+            updates.append('nap_number=%s')
             values.append(request.form.get('nap_number'))
         if request.form.get('potencia'):
-            updates.append('potencia=?')
+            updates.append('potencia=%s')
             values.append(request.form.get('potencia'))
         if request.form.get('plan_id'):
-            updates.append('plan_id=?')
+            updates.append('plan_id=%s')
             values.append(int(request.form.get('plan_id')))
         if request.form.get('connection_status'):
-            updates.append('connection_status=?')
+            updates.append('connection_status=%s')
             values.append(request.form.get('connection_status'))
         
         values.append(id)
-        sql = 'UPDATE clients SET ' + ', '.join(updates) + ' WHERE id=?'
+        sql = 'UPDATE clients SET ' + ', '.join(updates) + ' WHERE id=%s'
         
-        db.execute(sql, values)
+        cur = db.cursor()
+        cur.execute(sql, values)
         db.commit()
         flash('Cliente actualizado', 'success')
         return redirect(url_for('clients_list'))
     
-    client = db.execute('SELECT * FROM clients WHERE id = ?', (id,)).fetchone()
-    plans = db.execute('SELECT * FROM plans ORDER BY price').fetchall()
-    db.close()
+    cur = db.cursor()
+    cur.execute('SELECT * FROM clients WHERE id = %s', (id,))
+    client = cur.fetchone()
+    cur.execute('SELECT * FROM plans ORDER BY price')
+    plans = cur.fetchall()
     return render_template('client_form.html', plans=plans, client=client)
 
 @app.route('/clients/<int:id>/delete', methods=['POST'])
@@ -223,9 +235,9 @@ def client_edit(id):
 @require_admin
 def client_delete(id):
     db = get_db()
-    db.execute('DELETE FROM clients WHERE id = ?', (id,))
+    cur = db.cursor()
+    cur.execute('DELETE FROM clients WHERE id = %s', (id,))
     db.commit()
-    db.close()
     flash('Cliente eliminado', 'success')
     return redirect(url_for('clients_list'))
 
@@ -234,13 +246,14 @@ def client_delete(id):
 @require_admin
 def plans_list():
     db = get_db()
-    plans = db.execute('''
+    cur = db.cursor()
+    cur.execute('''
         SELECT p.*, COUNT(c.id) as client_count
         FROM plans p LEFT JOIN clients c ON p.id = c.plan_id
         GROUP BY p.id
         ORDER BY p.price
-    ''').fetchall()
-    db.close()
+    ''')
+    plans = cur.fetchall()
     return render_template('plans.html', plans=plans)
 
 @app.route('/plans/new', methods=['GET', 'POST'])
@@ -249,9 +262,10 @@ def plans_list():
 def plan_new():
     if request.method == 'POST':
         db = get_db()
-        db.execute('''
+        cur = db.cursor()
+        cur.execute('''
             INSERT INTO plans (name, speed, price, description)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         ''', (
             request.form['name'],
             request.form['speed'],
@@ -259,7 +273,6 @@ def plan_new():
             request.form.get('description')
         ))
         db.commit()
-        db.close()
         flash('Plan creado exitosamente', 'success')
         return redirect(url_for('plans_list'))
     return render_template('plan_form.html', plan=None)
@@ -270,9 +283,10 @@ def plan_new():
 def plan_edit(id):
     db = get_db()
     if request.method == 'POST':
-        db.execute('''
-            UPDATE plans SET name=?, speed=?, price=?, description=?
-            WHERE id=?
+        cur = db.cursor()
+        cur.execute('''
+            UPDATE plans SET name=%s, speed=%s, price=%s, description=%s
+            WHERE id=%s
         ''', (
             request.form['name'],
             request.form['speed'],
@@ -281,12 +295,12 @@ def plan_edit(id):
             id
         ))
         db.commit()
-        db.close()
         flash('Plan actualizado', 'success')
         return redirect(url_for('plans_list'))
     
-    plan = db.execute('SELECT * FROM plans WHERE id = ?', (id,)).fetchone()
-    db.close()
+    cur = db.cursor()
+    cur.execute('SELECT * FROM plans WHERE id = %s', (id,))
+    plan = cur.fetchone()
     return render_template('plan_form.html', plan=plan)
 
 @app.route('/plans/<int:id>/delete', methods=['POST'])
@@ -294,9 +308,9 @@ def plan_edit(id):
 @require_admin
 def plan_delete(id):
     db = get_db()
-    db.execute('DELETE FROM plans WHERE id = ?', (id,))
+    cur = db.cursor()
+    cur.execute('DELETE FROM plans WHERE id = %s', (id,))
     db.commit()
-    db.close()
     flash('Plan eliminado', 'success')
     return redirect(url_for('plans_list'))
 
@@ -305,37 +319,36 @@ def plan_delete(id):
 @require_admin
 def finances():
     db = get_db()
+    cur = db.cursor()
     
-    total_monthly = db.execute("SELECT COALESCE(SUM(amount), 0) as total FROM monthly_payments WHERE status = 'paid'").fetchone()['total']
-    total_other_incomes = db.execute("SELECT COALESCE(SUM(amount), 0) as total FROM other_incomes").fetchone()['total']
-    total_expenses = db.execute("SELECT COALESCE(SUM(amount), 0) as total FROM expenses").fetchone()['total']
+    cur.execute("SELECT COALESCE(SUM(amount), 0) as total FROM monthly_payments WHERE status = 'paid'")
+    total_monthly = cur.fetchone()['total']
+    cur.execute("SELECT COALESCE(SUM(amount), 0) as total FROM other_incomes")
+    total_other_incomes = cur.fetchone()['total']
+    cur.execute("SELECT COALESCE(SUM(amount), 0) as total FROM expenses")
+    total_expenses = cur.fetchone()['total']
     balance = total_monthly + total_other_incomes - total_expenses
     
-    monthly_payments = db.execute('''
+    cur.execute('''
         SELECT mp.*, c.first_name, c.last_name, p.name as plan_name
         FROM monthly_payments mp
         JOIN clients c ON mp.client_id = c.id
         LEFT JOIN plans p ON c.plan_id = p.id
         ORDER BY mp.payment_date DESC
-    ''').fetchall()
+    ''')
+    monthly_payments = cur.fetchall()
     
-    other_incomes = db.execute('''
-        SELECT * FROM other_incomes ORDER BY income_date DESC
-    ''').fetchall()
+    cur.execute('SELECT * FROM other_incomes ORDER BY income_date DESC')
+    other_incomes = cur.fetchall()
     
-    expenses = db.execute('''
-        SELECT * FROM expenses ORDER BY expense_date DESC
-    ''').fetchall()
+    cur.execute('SELECT * FROM expenses ORDER BY expense_date DESC')
+    expenses = cur.fetchall()
     
-    income_by_category = db.execute('''
-        SELECT category, SUM(amount) as total FROM other_incomes GROUP BY category
-    ''').fetchall()
+    cur.execute('SELECT category, SUM(amount) as total FROM other_incomes GROUP BY category')
+    income_by_category = cur.fetchall()
     
-    expense_by_category = db.execute('''
-        SELECT category, SUM(amount) as total FROM expenses GROUP BY category
-    ''').fetchall()
-    
-    db.close()
+    cur.execute('SELECT category, SUM(amount) as total FROM expenses GROUP BY category')
+    expense_by_category = cur.fetchall()
     
     return render_template('finances.html',
                          total_monthly=total_monthly,
@@ -359,9 +372,10 @@ def payment_new():
         amount = float(request.form['amount'])
         method = request.form.get('method', 'efectivo')
         
-        db.execute('''
+        cur = db.cursor()
+        cur.execute('''
             INSERT INTO monthly_payments (client_id, amount, month, payment_date, method, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
             client_id,
             amount,
@@ -372,17 +386,19 @@ def payment_new():
             request.form.get('notes')
         ))
         
-        client = db.execute('SELECT connection_status FROM clients WHERE id = ?', (client_id,)).fetchone()
+        cur.execute('SELECT connection_status FROM clients WHERE id = %s', (client_id,))
+        client = cur.fetchone()
         if client and client['connection_status'] == 'cut':
-            db.execute("UPDATE clients SET connection_status = 'active' WHERE id = ?", (client_id,))
+            cur.execute("UPDATE clients SET connection_status = 'active' WHERE id = %s", (client_id,))
         
         db.commit()
         flash('Pago registrado', 'success')
         return redirect(url_for('finances'))
     
-    clients = db.execute('SELECT id, first_name, last_name FROM clients ORDER BY first_name, last_name').fetchall()
+    cur = db.cursor()
+    cur.execute('SELECT id, first_name, last_name FROM clients ORDER BY first_name, last_name')
+    clients = cur.fetchall()
     current_month = datetime.now().strftime('%Y-%m')
-    db.close()
     return render_template('payment_form.html', clients=clients, current_month=current_month, payment=None)
 
 @app.route('/finances/income/new', methods=['GET', 'POST'])
@@ -391,9 +407,10 @@ def payment_new():
 def income_new():
     db = get_db()
     if request.method == 'POST':
-        db.execute('''
+        cur = db.cursor()
+        cur.execute('''
             INSERT INTO other_incomes (description, amount, category, income_date, notes)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         ''', (
             request.form['description'],
             float(request.form['amount']),
@@ -412,9 +429,10 @@ def income_new():
 def expense_new():
     db = get_db()
     if request.method == 'POST':
-        db.execute('''
+        cur = db.cursor()
+        cur.execute('''
             INSERT INTO expenses (description, amount, category, expense_date, notes)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         ''', (
             request.form['description'],
             float(request.form['amount']),
@@ -432,13 +450,15 @@ def expense_new():
 @require_admin
 def client_payments(id):
     db = get_db()
-    client = db.execute('SELECT * FROM clients WHERE id = ?', (id,)).fetchone()
-    payments = db.execute('''
+    cur = db.cursor()
+    cur.execute('SELECT * FROM clients WHERE id = %s', (id,))
+    client = cur.fetchone()
+    cur.execute('''
         SELECT * FROM monthly_payments
-        WHERE client_id = ?
+        WHERE client_id = %s
         ORDER BY payment_date DESC
-    ''', (id,)).fetchall()
-    db.close()
+    ''', (id,))
+    payments = cur.fetchall()
     return render_template('client_payments.html', client=client, payments=payments)
 
 @app.route('/api/clients/search')
@@ -446,12 +466,13 @@ def client_payments(id):
 def api_client_search():
     db = get_db()
     query = request.args.get('q', '')
-    clients = db.execute('''
+    cur = db.cursor()
+    cur.execute('''
         SELECT id, first_name, last_name, cedula FROM clients
-        WHERE first_name LIKE ? OR last_name LIKE ? OR cedula LIKE ?
+        WHERE first_name LIKE %s OR last_name LIKE %s OR cedula LIKE %s
         ORDER BY first_name, last_name LIMIT 10
-    ''', (f'%{query}%', f'%{query}%', f'%{query}%')).fetchall()
-    db.close()
+    ''', (f'%{query}%', f'%{query}%', f'%{query}%'))
+    clients = cur.fetchall()
     return jsonify([dict(c) for c in clients])
 
 @app.route('/export/clients')
@@ -459,11 +480,12 @@ def api_client_search():
 def export_clients():
     from openpyxl import Workbook
     db = get_db()
-    clients = db.execute('''
+    cur = db.cursor()
+    cur.execute('''
         SELECT c.*, p.name as plan_name, p.speed as plan_speed, p.price as plan_price
         FROM clients c LEFT JOIN plans p ON c.plan_id = p.id
-    ''').fetchall()
-    db.close()
+    ''')
+    clients = cur.fetchall()
     
     wb = Workbook()
     ws = wb.active
@@ -508,17 +530,18 @@ def import_clients():
     ws = wb.active
     
     db = get_db()
+    cur = db.cursor()
     imported = 0
     
     for row in ws.iter_rows(min_row=2, values_only=True):
         if row[0] is None:
             continue
         try:
-            db.execute('''
+            cur.execute('''
                 INSERT INTO clients (first_name, last_name, cedula, phone, email, address,
                     router_model, router_serial, router_mac, ip_address, nap_number, potencia,
                     plan_id, connection_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8],
                   row[9], row[10], row[11], row[12], None, row[15] or 'active'))
             imported += 1
@@ -526,7 +549,6 @@ def import_clients():
             pass
     
     db.commit()
-    db.close()
     flash(f'{imported} clientes importados', 'success')
     return redirect(url_for('clients_list'))
 
@@ -535,8 +557,9 @@ def import_clients():
 def export_plans():
     from openpyxl import Workbook
     db = get_db()
-    plans = db.execute('SELECT * FROM plans').fetchall()
-    db.close()
+    cur = db.cursor()
+    cur.execute('SELECT * FROM plans')
+    plans = cur.fetchall()
     
     wb = Workbook()
     ws = wb.active
@@ -570,22 +593,22 @@ def import_plans():
     ws = wb.active
     
     db = get_db()
+    cur = db.cursor()
     imported = 0
     
     for row in ws.iter_rows(min_row=2, values_only=True):
         if row[0] is None:
             continue
         try:
-            db.execute('''
+            cur.execute('''
                 INSERT INTO plans (name, speed, price, description)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             ''', (row[1], row[2], float(row[3]) if row[3] else 0, row[4]))
             imported += 1
         except:
             pass
     
     db.commit()
-    db.close()
     flash(f'{imported} planes importados', 'success')
     return redirect(url_for('plans_list'))
 
@@ -595,33 +618,35 @@ def import_plans():
 def export_finances():
     from openpyxl import Workbook
     db = get_db()
+    cur = db.cursor()
     
     wb = Workbook()
     
     ws = wb.active
     ws.title = "Pagos Mensuales"
     ws.append(['ID', 'Cliente', 'Monto', 'Mes', 'Fecha Pago', 'Método', 'Estado'])
-    payments = db.execute('''
+    cur.execute('''
         SELECT mp.*, c.first_name, c.last_name
         FROM monthly_payments mp JOIN clients c ON mp.client_id = c.id
-    ''').fetchall()
+    ''')
+    payments = cur.fetchall()
     for p in payments:
         ws.append([p['id'], f"{p['first_name']} {p['last_name']}", p['amount'],
                    p['month'], p['payment_date'], p['method'], p['status']])
     
     ws2 = wb.create_sheet("Otros Ingresos")
     ws2.append(['ID', 'Descripción', 'Monto', 'Categoría', 'Fecha'])
-    incomes = db.execute('SELECT * FROM other_incomes').fetchall()
+    cur.execute('SELECT * FROM other_incomes')
+    incomes = cur.fetchall()
     for i in incomes:
         ws2.append([i['id'], i['description'], i['amount'], i['category'], i['income_date']])
     
     ws3 = wb.create_sheet("Gastos")
     ws3.append(['ID', 'Descripción', 'Monto', 'Categoría', 'Fecha'])
-    expenses = db.execute('SELECT * FROM expenses').fetchall()
+    cur.execute('SELECT * FROM expenses')
+    expenses = cur.fetchall()
     for e in expenses:
         ws3.append([e['id'], e['description'], e['amount'], e['category'], e['expense_date']])
-    
-    db.close()
     
     from io import BytesIO
     from flask import make_response
@@ -634,6 +659,11 @@ def export_finances():
     return response
 
 if __name__ == '__main__':
+    import os
+    if 'DATABASE_URL' not in os.environ:
+        print("ERROR: DATABASE_URL not set!")
+        print("Please set DATABASE_URL environment variable")
+        exit(1)
     try:
         init_db()
     except Exception as e:

@@ -69,20 +69,23 @@ def index():
 def login():
     if request.method == 'POST':
         try:
-            username = request.form['username']
-            password = request.form['password']
+            username = request.form.get('username', '')
+            password = request.form.get('password', '')
+            
             db = get_db()
             cur = db.cursor()
-            cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+            cur.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cur.fetchone()
-            if user:
-                if check_password_hash(user['password'], password):
-                    login_user(User(user['id'], user['username'], user['role']))
-                    return redirect(url_for('index'))
-            flash('Usuario o contraseña incorrectos', 'danger')
+            
+            if user is None:
+                flash('Usuario no existe', 'danger')
+            elif check_password_hash(user['password'], password):
+                login_user(User(user['id'], user['username'], user['role']))
+                return redirect(url_for('index'))
+            else:
+                flash('Contraseña incorrecta', 'danger')
         except Exception as e:
-            print(f"Login error: {e}")
-            flash('Error de conexión', 'danger')
+            flash(f'Error: {str(e)}', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')

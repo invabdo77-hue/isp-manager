@@ -10,7 +10,7 @@ itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
 openpyxl==3.1.2
-psycopg[binary]==3.1.18
+psycopg2-binary
 gunicorn==21.2.0
 PyYAML==6.0.3
 SQLAlchemy==2.0.49

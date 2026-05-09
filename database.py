@@ -1,5 +1,5 @@
-import psycopg
-import psycopg.types
+import psycopg2
+import psycopg2.extras
 import os
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -16,8 +16,7 @@ def get_db():
             url = f"{url}{separator}sslmode=require"
         
         try:
-            conn = psycopg.connect(url, row_factory=psycopg.rows.dict_row)
-            g.db = conn
+            g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
         except Exception as e:
             print(f"Connection error: {e}")
             raise
@@ -30,7 +29,7 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    conn = psycopg.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     
     cur.execute('''
@@ -121,7 +120,7 @@ def init_db():
 
 def create_default_users():
     from werkzeug.security import generate_password_hash
-    conn = psycopg.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     cur.execute('SELECT COUNT(*) FROM users')
     if cur.fetchone()[0] == 0:
@@ -133,7 +132,7 @@ def create_default_users():
 
 def check_and_cut_clients():
     from datetime import datetime
-    conn = psycopg.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     current_month = datetime.now().strftime('%Y-%m')
     cur.execute('''

@@ -1,5 +1,5 @@
-import psycopg2
-import psycopg2.extras
+import psycopg
+import psycopg.types
 import os
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -9,14 +9,14 @@ def get_db():
     if 'db' not in g:
         if not DATABASE_URL:
             raise Exception("DATABASE_URL not set")
+        
         url = DATABASE_URL
         if 'sslmode' not in url.lower():
             separator = '&' if '?' in url else '?'
             url = f"{url}{separator}sslmode=require"
-        try:
-            g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
-        except Exception as e:
-            raise Exception(f"Database connection failed: {e}")
+        
+        conn = psycopg.connect(url, row_factory=psycopg.rows.dict_row)
+        g.db = conn
     return g.db
 
 def close_db(e=None):
@@ -26,7 +26,7 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg.connect(DATABASE_URL)
     cur = conn.cursor()
     
     cur.execute('''
@@ -117,7 +117,7 @@ def init_db():
 
 def create_default_users():
     from werkzeug.security import generate_password_hash
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg.connect(DATABASE_URL)
     cur = conn.cursor()
     cur.execute('SELECT COUNT(*) FROM users')
     if cur.fetchone()[0] == 0:
@@ -129,7 +129,7 @@ def create_default_users():
 
 def check_and_cut_clients():
     from datetime import datetime
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg.connect(DATABASE_URL)
     cur = conn.cursor()
     current_month = datetime.now().strftime('%Y-%m')
     cur.execute('''

@@ -21,17 +21,17 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    db = get_db()
-    if db is None:
-        return None
     try:
+        db = get_db()
+        if db is None:
+            return None
         cur = db.cursor()
         cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
         user = cur.fetchone()
         if user:
             return User(user['id'], user['username'], user['role'])
-    except:
-        pass
+    except Exception as e:
+        print(f"Error loading user: {e}")
     return None
 
 def require_admin(f):

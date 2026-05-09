@@ -22,11 +22,16 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     db = get_db()
-    cur = db.cursor()
-    cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
-    user = cur.fetchone()
-    if user:
-        return User(user['id'], user['username'], user['role'])
+    if db is None:
+        return None
+    try:
+        cur = db.cursor()
+        cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+        user = cur.fetchone()
+        if user:
+            return User(user['id'], user['username'], user['role'])
+    except:
+        pass
     return None
 
 def require_admin(f):
@@ -42,8 +47,8 @@ def require_admin(f):
 def health():
     import os
     if not os.environ.get('DATABASE_URL'):
-        return "Database not configured", 500
-    return "OK", 200
+        return '{"status": "warning", "database": "not configured"}', 200, {'Content-Type': 'application/json'}
+    return '{"status": "ok", "database": "connected"}', 200, {'Content-Type': 'application/json'}
 
 @app.route('/')
 @login_required

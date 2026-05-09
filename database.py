@@ -9,14 +9,17 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '')
 def get_db():
     if 'db' not in g:
         if not DATABASE_URL:
-            raise Exception("DATABASE_URL not configured")
+            return None
         
-        url = DATABASE_URL
-        if 'sslmode' not in url.lower():
-            separator = '&' if '?' in url else '?'
-            url = f"{url}{separator}sslmode=require"
-        
-        g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            url = DATABASE_URL
+            if 'sslmode' not in url.lower():
+                separator = '&' if '?' in url else '?'
+                url = f"{url}{separator}sslmode=require"
+            g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10)
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            return None
     return g.db
 
 def close_db(e=None):

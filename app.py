@@ -654,11 +654,11 @@ def setup():
         
         if count == 0:
             cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
-                       ('admin', generate_password_hash('admin123'), 'admin'))
+                       ('adminisp', generate_password_hash('adminisp123'), 'admin'))
             cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
                        ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
             db.commit()
-            return "Usuarios creados: admin/admin123, tecnico1/tecnico123", 200
+            return "Usuarios creados: adminisp/adminisp123, tecnico1/tecnico123", 200
         else:
             return f"Ya hay {count} usuarios en la base de datos", 200
     except Exception as e:

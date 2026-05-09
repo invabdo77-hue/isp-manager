@@ -1,29 +1,32 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import os
-from datetime import datetime
-from flask import g
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'isp_manager.db')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:TepWPQhTqiyDRdZIYhMuiLlaEMZhygYr@postgres.railway.internal:5432/railway')
 
 def get_db():
+    from flask import g
     if 'db' not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        url = DATABASE_URL
+        if 'sslmode' not in url.lower():
+            separator = '&' if '?' in url else '?'
+            url = f"{url}{separator}sslmode=require"
+        g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
     return g.db
 
 def close_db(e=None):
+    from flask import g
     db = g.pop('db', None)
     if db is not None:
         db.close()
 
 def init_db():
-    conn = get_db()
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             speed TEXT NOT NULL,
             price REAL NOT NULL,
@@ -34,7 +37,7 @@ def init_db():
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS clients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             cedula TEXT UNIQUE,
@@ -55,7 +58,7 @@ def init_db():
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS monthly_payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             client_id INTEGER NOT NULL REFERENCES clients(id),
             amount REAL NOT NULL,
             month TEXT NOT NULL,
@@ -68,7 +71,7 @@ def init_db():
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS other_incomes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             description TEXT NOT NULL,
             amount REAL NOT NULL,
             category TEXT DEFAULT 'otro',
@@ -79,7 +82,7 @@ def init_db():
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             description TEXT NOT NULL,
             amount REAL NOT NULL,
             category TEXT DEFAULT 'otro',
@@ -90,7 +93,7 @@ def init_db():
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             role TEXT DEFAULT 'technician' CHECK(role IN ('admin', 'technician')),
@@ -104,19 +107,24 @@ def init_db():
     cur.execute("INSERT INTO plans (name, speed, price, description) VALUES ('300 Mbps', '300 Mbps', 40.00, 'Plan 300 Mbps')")
     
     conn.commit()
+    cur.close()
+    conn.close()
 
 def create_default_users():
     from werkzeug.security import generate_password_hash
-    conn = get_db()
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
-    cur.execute('SELECT COUNT(*) as count FROM users')
-    if cur.fetchone()['count'] == 0:
-        cur.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', generate_password_hash('admin123'), 'admin'))
-        cur.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
+    cur.execute('SELECT COUNT(*) FROM users')
+    if cur.fetchone()[0] == 0:
+        cur.execute("INSERT INTO users (username, password, role) VALUES ('admin', %s, 'admin')", (generate_password_hash('admin123'),))
+        cur.execute("INSERT INTO users (username, password, role) VALUES ('tecnico1', %s, 'technician')", (generate_password_hash('tecnico123'),))
         conn.commit()
+    cur.close()
+    conn.close()
 
 def check_and_cut_clients():
-    conn = get_db()
+    from datetime import datetime
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     current_month = datetime.now().strftime('%Y-%m')
     cur.execute('''
@@ -124,13 +132,15 @@ def check_and_cut_clients():
         WHERE c.connection_status = 'active'
         AND c.id NOT IN (
             SELECT client_id FROM monthly_payments 
-            WHERE month = ? AND status = 'paid'
+            WHERE month = %s AND status = 'paid'
         )
     ''', (current_month,))
     clients_to_cut = cur.fetchall()
     for client in clients_to_cut:
-        cur.execute('UPDATE clients SET connection_status = ? WHERE id = ?', ('cut', client['id']))
+        cur.execute('UPDATE clients SET connection_status = %s WHERE id = %s', ('cut', client[0]))
     conn.commit()
+    cur.close()
+    conn.close()
     return len(clients_to_cut)
 
 if __name__ == '__main__':

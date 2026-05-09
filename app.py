@@ -425,7 +425,8 @@ def export_clients():
     wb = Workbook()
     ws = wb.active
     ws.append(['ID', 'Nombre', 'Apellido', 'Cedula', 'Telefono', 'Email', 'Direccion', 'Router', 'Serial', 'MAC', 'IP', 'NAP', 'Potencia', 'Plan', 'Velocidad', 'Precio', 'Estado', 'Fecha'])
-    for c in ws.append([c['id'], c['first_name'], c['last_name'], c['cedula'], c['phone'], c['email'], c['address'], c['router_model'], c['router_serial'], c['router_mac'], c['ip_address'], c['nap_number'], c['potencia'], c['plan_name'], c['plan_speed'], c['plan_price'], c['connection_status'], c['registration_date']])
+    for c in clients:
+        ws.append([c['id'], c['first_name'], c['last_name'], c['cedula'], c['phone'], c['email'], c['address'], c['router_model'], c['router_serial'], c['router_mac'], c['ip_address'], c['nap_number'], c['potencia'], c['plan_name'], c['plan_speed'], c['plan_price'], c['connection_status'], c['registration_date']])
     from io import BytesIO
     from flask import make_response
     output = BytesIO()

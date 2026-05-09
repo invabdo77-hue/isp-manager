@@ -15,8 +15,12 @@ def get_db():
             separator = '&' if '?' in url else '?'
             url = f"{url}{separator}sslmode=require"
         
-        conn = psycopg.connect(url, row_factory=psycopg.rows.dict_row)
-        g.db = conn
+        try:
+            conn = psycopg.connect(url, row_factory=psycopg.rows.dict_row)
+            g.db = conn
+        except Exception as e:
+            print(f"Connection error: {e}")
+            raise
     return g.db
 
 def close_db(e=None):

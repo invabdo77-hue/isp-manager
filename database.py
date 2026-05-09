@@ -2,16 +2,21 @@ import psycopg2
 import psycopg2.extras
 import os
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:TepWPQhTqiyDRdZIYhMuiLlaEMZhygYr@postgres.railway.internal:5432/railway')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db():
     from flask import g
     if 'db' not in g:
+        if not DATABASE_URL:
+            raise Exception("DATABASE_URL not set")
         url = DATABASE_URL
         if 'sslmode' not in url.lower():
             separator = '&' if '?' in url else '?'
             url = f"{url}{separator}sslmode=require"
-        g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            g.db = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        except Exception as e:
+            raise Exception(f"Database connection failed: {e}")
     return g.db
 
 def close_db(e=None):

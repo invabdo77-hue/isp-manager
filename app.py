@@ -625,10 +625,14 @@ def health():
     try:
         db = get_db()
         if db:
-            return "OK", 200
+            return "OK - Database connected", 200
         return "DB Error", 500
-    except:
-        return "Error", 500
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+@app.route('/test')
+def test():
+    return "App funcionando!", 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

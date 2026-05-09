@@ -639,6 +639,28 @@ def health():
 def test():
     return "App funcionando!", 200
 
+@app.route('/setup')
+def setup():
+    from werkzeug.security import generate_password_hash
+    try:
+        db = get_db()
+        cur = db.cursor()
+        
+        cur.execute('SELECT COUNT(*) FROM users')
+        count = cur.fetchone()[0]
+        
+        if count == 0:
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
+                       ('admin', generate_password_hash('admin123'), 'admin'))
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
+                       ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
+            db.commit()
+            return "Usuarios creados: admin/admin123, tecnico1/tecnico123", 200
+        else:
+            return f"Ya hay {count} usuarios en la base de datos", 200
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"Iniciando en puerto {port}")

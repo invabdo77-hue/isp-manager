@@ -620,18 +620,17 @@ def export_finances():
     response.headers['Content-Disposition'] = 'attachment; filename=finanzas.xlsx'
     return response
 
+@app.route('/health')
+def health():
+    try:
+        db = get_db()
+        if db:
+            return "OK", 200
+        return "DB Error", 500
+    except:
+        return "Error", 500
+
 if __name__ == '__main__':
-    with app.app_context():
-        try:
-            init_db()
-            print("Database initialized")
-        except Exception as e:
-            print(f"Error: {e}")
-        try:
-            create_default_users()
-            print("Users created")
-        except:
-            pass
-    
     port = int(os.environ.get('PORT', 5000))
+    print(f"Iniciando en puerto {port}")
     app.run(debug=False, host='0.0.0.0', port=port)

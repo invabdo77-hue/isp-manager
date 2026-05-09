@@ -649,6 +649,48 @@ def setup():
         db = get_db()
         cur = db.cursor()
         
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS plans (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                speed TEXT NOT NULL,
+                price REAL NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS clients (
+                id SERIAL PRIMARY KEY,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                cedula TEXT UNIQUE,
+                phone TEXT,
+                email TEXT,
+                address TEXT,
+                router_model TEXT,
+                router_serial TEXT,
+                router_mac TEXT,
+                ip_address TEXT,
+                nap_number TEXT,
+                potencia TEXT,
+                plan_id INTEGER,
+                connection_status TEXT DEFAULT 'active',
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT DEFAULT 'technician',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         cur.execute('SELECT COUNT(*) FROM users')
         count = cur.fetchone()[0]
         
@@ -658,7 +700,7 @@ def setup():
             cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
                        ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
             db.commit()
-            return "Usuarios creados: adminisp/adminisp123, tecnico1/tecnico123", 200
+            return "Base de datos inicializada. Usuarios: adminisp/adminisp123, tecnico1/tecnico123", 200
         else:
             return f"Ya hay {count} usuarios en la base de datos", 200
     except Exception as e:

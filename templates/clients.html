@@ -5,13 +5,11 @@
     <h2>Clientes</h2>
     <div style="display: flex; gap: 10px;">
         <a href="{{ url_for('export_clients') }}" class="btn btn-success">📥 Exportar Excel</a>
-        {% if current_user.role == 'admin' %}
         <form action="{{ url_for('import_clients') }}" method="POST" enctype="multipart/form-data" style="display: inline;">
             <label class="btn btn-warning" style="cursor: pointer;">📤 Importar Excel
                 <input type="file" name="file" accept=".xlsx" onchange="this.form.submit()" style="display: none;">
             </label>
         </form>
-        {% endif %}
         <a href="{{ url_for('client_new') }}" class="btn">+ Nuevo Cliente</a>
     </div>
 </div>

@@ -1,18 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
 import sqlite3
-from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'isp_manager_secret_key_2024')
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 USE_POSTGRES = bool(DATABASE_URL)
-
-print(f"[DEBUG] DATABASE_URL exists: {bool(DATABASE_URL)}")
-print(f"[DEBUG] USE_POSTGRES: {USE_POSTGRES}")
 
 def get_db():
     if USE_POSTGRES:
@@ -33,41 +29,6 @@ def get_db():
 def get_placeholder():
     return '%s' if USE_POSTGRES else '?'
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-class User(UserMixin):
-    def __init__(self, id, username, role):
-        self.id = id
-        self.username = username
-        self.role = role
-
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        conn = get_db()
-        cur = conn.cursor()
-        ph = get_placeholder()
-        cur.execute(f'SELECT * FROM users WHERE id = {ph}', (user_id,))
-        user = cur.fetchone()
-        conn.close()
-        if user:
-            print(f"[DEBUG] User loaded: {user['username']}, role: {user['role']}")
-            return User(user['id'], user['username'], user['role'])
-    except Exception as e:
-        print(f"[ERROR] load_user: {e}")
-    return None
-
-def require_admin(f):
-    def decorated(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
-            flash('Acceso solo para administradores', 'danger')
-            return redirect(url_for('index'))
-        return f(*args, **kwargs)
-    decorated.__name__ = f.__name__
-    return decorated
-
 @app.route('/setup')
 def setup():
     try:
@@ -79,10 +40,6 @@ def setup():
             cur.execute('''CREATE TABLE IF NOT EXISTS plans (
                 id SERIAL PRIMARY KEY, name TEXT NOT NULL, speed TEXT NOT NULL,
                 price REAL NOT NULL, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-            cur.execute('''CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL, role TEXT DEFAULT 'technician',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
             cur.execute('''CREATE TABLE IF NOT EXISTS clients (
                 id SERIAL PRIMARY KEY, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
                 cedula TEXT, phone TEXT, email TEXT, address TEXT, router_model TEXT,
@@ -103,10 +60,6 @@ def setup():
             cur.execute('''CREATE TABLE IF NOT EXISTS plans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, speed TEXT NOT NULL,
                 price REAL NOT NULL, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-            cur.execute('''CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL, role TEXT DEFAULT 'technician',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
             cur.execute('''CREATE TABLE IF NOT EXISTS clients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
                 cedula TEXT, phone TEXT, email TEXT, address TEXT, router_model TEXT,
@@ -124,15 +77,6 @@ def setup():
                 id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL, amount REAL NOT NULL,
                 category TEXT DEFAULT 'otro', expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
 
-        cur.execute(f'SELECT COUNT(*) FROM users')
-        if cur.fetchone()[0] == 0:
-            password_hash = generate_password_hash('admin123')
-            cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-                       ('admin', password_hash, 'admin'))
-            password_hash2 = generate_password_hash('tecnico123')
-            cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-                       ('tecnico1', password_hash2, 'technician'))
-
         cur.execute(f'SELECT COUNT(*) FROM plans')
         if cur.fetchone()[0] == 0:
             cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('100 Mbps', '100 Mbps', 25.00, 'Plan 100 Mbps'))
@@ -141,47 +85,11 @@ def setup():
 
         conn.commit()
         conn.close()
-        return f"OK! DB initialized (PostgreSQL: {USE_POSTGRES})", 200
+        return f"OK! DB inicializada (PostgreSQL: {USE_POSTGRES})", 200
     except Exception as e:
         return f"Error: {str(e)}", 500
 
-@app.route('/reset-users')
-def reset_users():
-    try:
-        conn = get_db()
-        cur = conn.cursor()
-        ph = get_placeholder()
-        cur.execute(f"DELETE FROM users")
-        password_hash = generate_password_hash('admin123')
-        cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-                   ('admin', password_hash, 'admin'))
-        password_hash2 = generate_password_hash('tecnico123')
-        cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-                   ('tecnico1', password_hash2, 'technician'))
-        conn.commit()
-        conn.close()
-        return "OK! Users created: admin/admin123 y tecnico1/tecnico123"
-    except Exception as e:
-        return f"Error: {e}", 500
-
-@app.route('/debug-db')
-def debug_db():
-    try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT id, username, role FROM users')
-        users = cur.fetchall()
-        conn.close()
-        html = '<h1>Users in DB:</h1><ul>'
-        for u in users:
-            html += f"<li>ID: {u['id']}, User: {u['username']}, Role: {u['role']}</li>"
-        html += '</ul>'
-        return html
-    except Exception as e:
-        return f"Error: {e}"
-
 @app.route('/')
-@login_required
 def index():
     conn = get_db()
     cur = conn.cursor()
@@ -196,40 +104,7 @@ def index():
     conn.close()
     return render_template('index.html', total_clients=total_clients, active_clients=active_clients, recent_clients=recent_clients)
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username', '')
-        password = request.form.get('password', '')
-        print(f"[DEBUG] Login attempt: {username}")
-        try:
-            conn = get_db()
-            cur = conn.cursor()
-            ph = get_placeholder()
-            cur.execute(f"SELECT * FROM users WHERE username = {ph}", (username,))
-            user = cur.fetchone()
-            conn.close()
-            print(f"[DEBUG] User found: {user is not None}")
-            if user:
-                print(f"[DEBUG] Stored hash: {user['password'][:50]}...")
-                print(f"[DEBUG] check_password_hash result: {check_password_hash(user['password'], password)}")
-            if user and check_password_hash(user['password'], password):
-                login_user(User(user['id'], user['username'], user['role']))
-                return redirect(url_for('index'))
-            flash('Usuario o contraseña incorrectos', 'danger')
-        except Exception as e:
-            print(f"[ERROR] Login: {e}")
-            flash(f'Error: {e}', 'danger')
-    return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
 @app.route('/clients')
-@login_required
 def clients_list():
     conn = get_db()
     cur = conn.cursor()
@@ -241,7 +116,6 @@ def clients_list():
     return render_template('clients.html', clients=clients)
 
 @app.route('/clients/new', methods=['GET', 'POST'])
-@login_required
 def client_new():
     if request.method == 'POST':
         conn = get_db()
@@ -261,7 +135,7 @@ def client_new():
             vals.append(int(request.form.get('plan_id')))
             cols.append('plan_id')
 
-        vals.append(request.form.get('connection_status', 'active') if current_user.role == 'admin' else 'active')
+        vals.append('active')
         cols.append('connection_status')
 
         ph = get_placeholder()
@@ -281,7 +155,6 @@ def client_new():
     return render_template('client_form.html', plans=plans, client=None)
 
 @app.route('/clients/<int:id>/edit', methods=['GET', 'POST'])
-@login_required
 def client_edit(id):
     conn = get_db()
     if request.method == 'POST':
@@ -314,8 +187,6 @@ def client_edit(id):
     return render_template('client_form.html', plans=plans, client=client)
 
 @app.route('/clients/<int:id>/delete', methods=['POST'])
-@login_required
-@require_admin
 def client_delete(id):
     conn = get_db()
     cur = conn.cursor()
@@ -326,8 +197,6 @@ def client_delete(id):
     return redirect(url_for('clients_list'))
 
 @app.route('/plans')
-@login_required
-@require_admin
 def plans_list():
     conn = get_db()
     cur = conn.cursor()
@@ -339,8 +208,6 @@ def plans_list():
     return render_template('plans.html', plans=plans)
 
 @app.route('/plans/new', methods=['GET', 'POST'])
-@login_required
-@require_admin
 def plan_new():
     if request.method == 'POST':
         conn = get_db()
@@ -355,8 +222,6 @@ def plan_new():
     return render_template('plan_form.html', plan=None)
 
 @app.route('/plans/<int:id>/edit', methods=['GET', 'POST'])
-@login_required
-@require_admin
 def plan_edit(id):
     conn = get_db()
     ph = get_placeholder()
@@ -375,8 +240,6 @@ def plan_edit(id):
     return render_template('plan_form.html', plan=plan)
 
 @app.route('/plans/<int:id>/delete', methods=['POST'])
-@login_required
-@require_admin
 def plan_delete(id):
     conn = get_db()
     cur = conn.cursor()
@@ -387,7 +250,6 @@ def plan_delete(id):
     return redirect(url_for('plans_list'))
 
 @app.route('/export/plans')
-@login_required
 def export_plans():
     from openpyxl import Workbook
     conn = get_db()
@@ -407,8 +269,6 @@ def export_plans():
     return make_response(output.getvalue(), {'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename=planes.xlsx'})
 
 @app.route('/finances')
-@login_required
-@require_admin
 def finances():
     conn = get_db()
     cur = conn.cursor()
@@ -435,8 +295,6 @@ def finances():
                          other_incomes=other_incomes, expenses=expenses)
 
 @app.route('/finances/payment/new', methods=['GET', 'POST'])
-@login_required
-@require_admin
 def payment_new():
     if request.method == 'POST':
         conn = get_db()
@@ -460,8 +318,6 @@ def payment_new():
     return render_template('payment_form.html', clients=clients, current_month=datetime.now().strftime('%Y-%m'), payment=None)
 
 @app.route('/finances/income/new', methods=['GET', 'POST'])
-@login_required
-@require_admin
 def income_new():
     if request.method == 'POST':
         conn = get_db()
@@ -477,8 +333,6 @@ def income_new():
     return render_template('income_form.html', income=None)
 
 @app.route('/finances/expense/new', methods=['GET', 'POST'])
-@login_required
-@require_admin
 def expense_new():
     if request.method == 'POST':
         conn = get_db()
@@ -494,8 +348,6 @@ def expense_new():
     return render_template('expense_form.html', expense=None)
 
 @app.route('/finances/client/<int:id>/payments')
-@login_required
-@require_admin
 def client_payments(id):
     conn = get_db()
     cur = conn.cursor()
@@ -508,7 +360,6 @@ def client_payments(id):
     return render_template('client_payments.html', client=client, payments=payments)
 
 @app.route('/api/clients/search')
-@login_required
 def api_client_search():
     query = request.args.get('q', '')
     conn = get_db()
@@ -521,7 +372,6 @@ def api_client_search():
     return jsonify([dict(c) for c in results])
 
 @app.route('/export/clients')
-@login_required
 def export_clients():
     from openpyxl import Workbook
     conn = get_db()
@@ -542,8 +392,6 @@ def export_clients():
     return make_response(output.getvalue(), {'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename=clientes.xlsx'})
 
 @app.route('/import/clients', methods=['POST'])
-@login_required
-@require_admin
 def import_clients():
     from openpyxl import load_workbook
     if 'file' not in request.files:
@@ -570,8 +418,6 @@ def import_clients():
     return redirect(url_for('clients_list'))
 
 @app.route('/export/finances')
-@login_required
-@require_admin
 def export_finances():
     from openpyxl import Workbook
     conn = get_db()

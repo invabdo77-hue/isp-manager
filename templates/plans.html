@@ -5,9 +5,7 @@
     <h2>Planes</h2>
     <div style="display: flex; gap: 10px;">
         <a href="{{ url_for('export_plans') }}" class="btn btn-success">📥 Exportar Excel</a>
-        {% if current_user.role == 'admin' %}
         <a href="{{ url_for('plan_new') }}" class="btn">+ Nuevo Plan</a>
-        {% endif %}
     </div>
 </div>
 <div class="stats">

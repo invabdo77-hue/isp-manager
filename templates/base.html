@@ -292,16 +292,8 @@
             </a>
         </nav>
         <div class="user-info">
-            <div class="name">
-                {% if current_user.is_authenticated %}
-                    {% if current_user.role == 'admin' %}👑 Admin{% else %}🔧 Técnico{% endif %}: {{ current_user.username }}
-                {% else %}
-                    Invitado
-                {% endif %}
-            </div>
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('logout') }}">Salir</a>
-            {% endif %}
+            <div class="name">ISP Manager</div>
+            <a href="/">Inicio</a>
         </div>
     </aside>
     

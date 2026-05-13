@@ -1,0 +1,17 @@
+{
+  "name": "isp-manager",
+  "version": 2,
+  "database": {
+    "addons": [
+      {
+        "plan": "free",
+        "name": "isp-manager-db",
+        "database_name": "isp_manager"
+      }
+    ]
+  },
+  "build": {
+    "command": "pip install -r requirements.txt"
+  },
+  "start": "gunicorn app:app --bind 0.0.0.0:$PORT"
+}

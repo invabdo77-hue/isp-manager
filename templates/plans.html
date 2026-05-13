@@ -6,13 +6,8 @@
     <div style="display: flex; gap: 10px;">
         <a href="{{ url_for('export_plans') }}" class="btn btn-success">📥 Exportar Excel</a>
         {% if current_user.role == 'admin' %}
-        <form action="{{ url_for('import_plans') }}" method="POST" enctype="multipart/form-data">
-            <label class="btn btn-warning" style="cursor: pointer;">📤 Importar Excel
-                <input type="file" name="file" accept=".xlsx" onchange="this.form.submit()" style="display: none;">
-            </label>
-        </form>
-        {% endif %}
         <a href="{{ url_for('plan_new') }}" class="btn">+ Nuevo Plan</a>
+        {% endif %}
     </div>
 </div>
 <div class="stats">

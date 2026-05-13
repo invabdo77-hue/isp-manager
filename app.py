@@ -117,14 +117,16 @@ def setup():
             category TEXT DEFAULT 'otro', expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
 
     cur.execute(f'SELECT COUNT(*) FROM users')
-    if cur.fetchone()[0] == 0:
+    result = cur.fetchone()
+    if (result[0] if result else 0) == 0:
         cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
                    ('admin', generate_password_hash('admin123'), 'admin'))
         cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
                    ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
 
     cur.execute(f'SELECT COUNT(*) FROM plans')
-    if cur.fetchone()[0] == 0:
+    result = cur.fetchone()
+    if (result[0] if result else 0) == 0:
         cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('100 Mbps', '100 Mbps', 25.00, 'Plan 100 Mbps'))
         cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('200 Mbps', '200 Mbps', 30.00, 'Plan 200 Mbps'))
         cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('300 Mbps', '300 Mbps', 40.00, 'Plan 300 Mbps'))
@@ -166,9 +168,11 @@ def index():
     conn = get_db()
     cur = conn.cursor()
     cur.execute('SELECT COUNT(*) FROM clients')
-    total_clients = cur.fetchone()[0]
+    result = cur.fetchone()
+    total_clients = result[0] if result else 0
     cur.execute("SELECT COUNT(*) FROM clients WHERE connection_status = 'active'")
-    active_clients = cur.fetchone()[0]
+    result = cur.fetchone()
+    active_clients = result[0] if result else 0
     cur.execute('''SELECT c.*, p.name as plan_name, p.price as plan_price
         FROM clients c LEFT JOIN plans p ON c.plan_id = p.id
         ORDER BY c.registration_date DESC LIMIT 5''')
@@ -386,11 +390,14 @@ def finances():
     cur = conn.cursor()
     ph = get_placeholder()
     cur.execute(f"SELECT COALESCE(SUM(amount), 0) FROM monthly_payments WHERE status = 'paid'")
-    total_monthly = cur.fetchone()[0]
+    result = cur.fetchone()
+    total_monthly = result[0] if result else 0
     cur.execute(f"SELECT COALESCE(SUM(amount), 0) FROM other_incomes")
-    total_other_incomes = cur.fetchone()[0]
+    result = cur.fetchone()
+    total_other_incomes = result[0] if result else 0
     cur.execute(f"SELECT COALESCE(SUM(amount), 0) FROM expenses")
-    total_expenses = cur.fetchone()[0]
+    result = cur.fetchone()
+    total_expenses = result[0] if result else 0
     balance = total_monthly + total_other_incomes - total_expenses
 
     cur.execute(f'''SELECT mp.*, c.first_name, c.last_name, p.name as plan_name

@@ -11,6 +11,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'isp_manager_secret_key_2024')
 DATABASE_URL = os.environ.get('DATABASE_URL')
 USE_POSTGRES = bool(DATABASE_URL)
 
+print(f"[DEBUG] DATABASE_URL exists: {bool(DATABASE_URL)}")
+print(f"[DEBUG] USE_POSTGRES: {USE_POSTGRES}")
+
 def get_db():
     if USE_POSTGRES:
         import psycopg2
@@ -42,14 +45,18 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = get_db()
-    cur = conn.cursor()
-    ph = get_placeholder()
-    cur.execute(f'SELECT * FROM users WHERE id = {ph}', (user_id,))
-    user = cur.fetchone()
-    conn.close()
-    if user:
-        return User(user['id'], user['username'], user['role'])
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        ph = get_placeholder()
+        cur.execute(f'SELECT * FROM users WHERE id = {ph}', (user_id,))
+        user = cur.fetchone()
+        conn.close()
+        if user:
+            print(f"[DEBUG] User loaded: {user['username']}, role: {user['role']}")
+            return User(user['id'], user['username'], user['role'])
+    except Exception as e:
+        print(f"[ERROR] load_user: {e}")
     return None
 
 def require_admin(f):
@@ -63,102 +70,115 @@ def require_admin(f):
 
 @app.route('/setup')
 def setup():
-    conn = get_db()
-    cur = conn.cursor()
-    ph = get_placeholder()
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        ph = get_placeholder()
 
-    if USE_POSTGRES:
-        cur.execute('''CREATE TABLE IF NOT EXISTS plans (
-            id SERIAL PRIMARY KEY, name TEXT NOT NULL, speed TEXT NOT NULL,
-            price REAL NOT NULL, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL, role TEXT DEFAULT 'technician',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS clients (
-            id SERIAL PRIMARY KEY, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
-            cedula TEXT, phone TEXT, email TEXT, address TEXT, router_model TEXT,
-            router_serial TEXT, router_mac TEXT, ip_address TEXT, nap_number TEXT,
-            potencia TEXT, plan_id INTEGER, connection_status TEXT DEFAULT 'active',
-            registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS monthly_payments (
-            id SERIAL PRIMARY KEY, client_id INTEGER NOT NULL, amount REAL NOT NULL,
-            month TEXT NOT NULL, payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            method TEXT DEFAULT 'efectivo', status TEXT DEFAULT 'paid', notes TEXT)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS other_incomes (
-            id SERIAL PRIMARY KEY, description TEXT NOT NULL, amount REAL NOT NULL,
-            category TEXT DEFAULT 'otro', income_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS expenses (
-            id SERIAL PRIMARY KEY, description TEXT NOT NULL, amount REAL NOT NULL,
-            category TEXT DEFAULT 'otro', expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
-    else:
-        cur.execute('''CREATE TABLE IF NOT EXISTS plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, speed TEXT NOT NULL,
-            price REAL NOT NULL, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL, role TEXT DEFAULT 'technician',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS clients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
-            cedula TEXT, phone TEXT, email TEXT, address TEXT, router_model TEXT,
-            router_serial TEXT, router_mac TEXT, ip_address TEXT, nap_number TEXT,
-            potencia TEXT, plan_id INTEGER, connection_status TEXT DEFAULT 'active',
-            registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS monthly_payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, client_id INTEGER NOT NULL, amount REAL NOT NULL,
-            month TEXT NOT NULL, payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            method TEXT DEFAULT 'efectivo', status TEXT DEFAULT 'paid', notes TEXT)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS other_incomes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL, amount REAL NOT NULL,
-            category TEXT DEFAULT 'otro', income_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL, amount REAL NOT NULL,
-            category TEXT DEFAULT 'otro', expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
+        if USE_POSTGRES:
+            cur.execute('''CREATE TABLE IF NOT EXISTS plans (
+                id SERIAL PRIMARY KEY, name TEXT NOT NULL, speed TEXT NOT NULL,
+                price REAL NOT NULL, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL, role TEXT DEFAULT 'technician',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS clients (
+                id SERIAL PRIMARY KEY, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
+                cedula TEXT, phone TEXT, email TEXT, address TEXT, router_model TEXT,
+                router_serial TEXT, router_mac TEXT, ip_address TEXT, nap_number TEXT,
+                potencia TEXT, plan_id INTEGER, connection_status TEXT DEFAULT 'active',
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS monthly_payments (
+                id SERIAL PRIMARY KEY, client_id INTEGER NOT NULL, amount REAL NOT NULL,
+                month TEXT NOT NULL, payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                method TEXT DEFAULT 'efectivo', status TEXT DEFAULT 'paid', notes TEXT)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS other_incomes (
+                id SERIAL PRIMARY KEY, description TEXT NOT NULL, amount REAL NOT NULL,
+                category TEXT DEFAULT 'otro', income_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS expenses (
+                id SERIAL PRIMARY KEY, description TEXT NOT NULL, amount REAL NOT NULL,
+                category TEXT DEFAULT 'otro', expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
+        else:
+            cur.execute('''CREATE TABLE IF NOT EXISTS plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, speed TEXT NOT NULL,
+                price REAL NOT NULL, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL, role TEXT DEFAULT 'technician',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS clients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
+                cedula TEXT, phone TEXT, email TEXT, address TEXT, router_model TEXT,
+                router_serial TEXT, router_mac TEXT, ip_address TEXT, nap_number TEXT,
+                potencia TEXT, plan_id INTEGER, connection_status TEXT DEFAULT 'active',
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS monthly_payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, client_id INTEGER NOT NULL, amount REAL NOT NULL,
+                month TEXT NOT NULL, payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                method TEXT DEFAULT 'efectivo', status TEXT DEFAULT 'paid', notes TEXT)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS other_incomes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL, amount REAL NOT NULL,
+                category TEXT DEFAULT 'otro', income_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL, amount REAL NOT NULL,
+                category TEXT DEFAULT 'otro', expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT)''')
 
-    cur.execute(f'SELECT COUNT(*) FROM users')
-    if cur.fetchone()[0] == 0:
-        cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-                   ('admin', generate_password_hash('admin123'), 'admin'))
-        cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-                   ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
+        cur.execute(f'SELECT COUNT(*) FROM users')
+        if cur.fetchone()[0] == 0:
+            password_hash = generate_password_hash('admin123')
+            cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
+                       ('admin', password_hash, 'admin'))
+            password_hash2 = generate_password_hash('tecnico123')
+            cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
+                       ('tecnico1', password_hash2, 'technician'))
 
-    cur.execute(f'SELECT COUNT(*) FROM plans')
-    if cur.fetchone()[0] == 0:
-        cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('100 Mbps', '100 Mbps', 25.00, 'Plan 100 Mbps'))
-        cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('200 Mbps', '200 Mbps', 30.00, 'Plan 200 Mbps'))
-        cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('300 Mbps', '300 Mbps', 40.00, 'Plan 300 Mbps'))
+        cur.execute(f'SELECT COUNT(*) FROM plans')
+        if cur.fetchone()[0] == 0:
+            cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('100 Mbps', '100 Mbps', 25.00, 'Plan 100 Mbps'))
+            cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('200 Mbps', '200 Mbps', 30.00, 'Plan 200 Mbps'))
+            cur.execute(f"INSERT INTO plans (name, speed, price, description) VALUES ({ph}, {ph}, {ph}, {ph})", ('300 Mbps', '300 Mbps', 40.00, 'Plan 300 Mbps'))
 
-    conn.commit()
-    conn.close()
-    return f"Base de datos inicializada correctamente! (PostgreSQL: {USE_POSTGRES})", 200
+        conn.commit()
+        conn.close()
+        return f"OK! DB initialized (PostgreSQL: {USE_POSTGRES})", 200
+    except Exception as e:
+        return f"Error: {str(e)}", 500
 
 @app.route('/reset-users')
 def reset_users():
-    conn = get_db()
-    cur = conn.cursor()
-    ph = get_placeholder()
-    cur.execute(f"DELETE FROM users WHERE username IN ('admin', 'tecnico1')")
-    cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-               ('admin', generate_password_hash('admin123'), 'admin'))
-    cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
-               ('tecnico1', generate_password_hash('tecnico123'), 'technician'))
-    conn.commit()
-    conn.close()
-    return "Usuarios reiniciados! admin/admin123 y tecnico1/tecnico123", 200
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        ph = get_placeholder()
+        cur.execute(f"DELETE FROM users")
+        password_hash = generate_password_hash('admin123')
+        cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
+                   ('admin', password_hash, 'admin'))
+        password_hash2 = generate_password_hash('tecnico123')
+        cur.execute(f"INSERT INTO users (username, password, role) VALUES ({ph}, {ph}, {ph})",
+                   ('tecnico1', password_hash2, 'technician'))
+        conn.commit()
+        conn.close()
+        return "OK! Users created: admin/admin123 y tecnico1/tecnico123"
+    except Exception as e:
+        return f"Error: {e}", 500
 
-@app.route('/debug-login')
-def debug_login():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('SELECT id, username, role, password FROM users')
-    users = cur.fetchall()
-    conn.close()
-    html = '<h1>Usuarios en DB:</h1><ul>'
-    for u in users:
-        html += f"<li>ID: {u['id']}, User: {u['username']}, Role: {u['role']}<br>Hash: {u['password'][:50]}...</li>"
-    html += '</ul><p>Prueba: admin / admin123</p>'
-    return html
+@app.route('/debug-db')
+def debug_db():
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT id, username, role FROM users')
+        users = cur.fetchall()
+        conn.close()
+        html = '<h1>Users in DB:</h1><ul>'
+        for u in users:
+            html += f"<li>ID: {u['id']}, User: {u['username']}, Role: {u['role']}</li>"
+        html += '</ul>'
+        return html
+    except Exception as e:
+        return f"Error: {e}"
 
 @app.route('/')
 @login_required
@@ -181,16 +201,25 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
-        conn = get_db()
-        cur = conn.cursor()
-        ph = get_placeholder()
-        cur.execute(f"SELECT * FROM users WHERE username = {ph}", (username,))
-        user = cur.fetchone()
-        conn.close()
-        if user and check_password_hash(user['password'], password):
-            login_user(User(user['id'], user['username'], user['role']))
-            return redirect(url_for('index'))
-        flash('Usuario o contraseña incorrectos', 'danger')
+        print(f"[DEBUG] Login attempt: {username}")
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            ph = get_placeholder()
+            cur.execute(f"SELECT * FROM users WHERE username = {ph}", (username,))
+            user = cur.fetchone()
+            conn.close()
+            print(f"[DEBUG] User found: {user is not None}")
+            if user:
+                print(f"[DEBUG] Stored hash: {user['password'][:50]}...")
+                print(f"[DEBUG] check_password_hash result: {check_password_hash(user['password'], password)}")
+            if user and check_password_hash(user['password'], password):
+                login_user(User(user['id'], user['username'], user['role']))
+                return redirect(url_for('index'))
+            flash('Usuario o contraseña incorrectos', 'danger')
+        except Exception as e:
+            print(f"[ERROR] Login: {e}")
+            flash(f'Error: {e}', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -302,8 +331,7 @@ def client_delete(id):
 def plans_list():
     conn = get_db()
     cur = conn.cursor()
-    ph = get_placeholder()
-    cur.execute(f'''SELECT p.*, COUNT(c.id) as client_count
+    cur.execute('''SELECT p.*, COUNT(c.id) as client_count
         FROM plans p LEFT JOIN clients c ON p.id = c.plan_id
         GROUP BY p.id ORDER BY p.price''')
     plans = cur.fetchall()
@@ -384,16 +412,15 @@ def export_plans():
 def finances():
     conn = get_db()
     cur = conn.cursor()
-    ph = get_placeholder()
-    cur.execute(f"SELECT COALESCE(SUM(amount), 0) FROM monthly_payments WHERE status = 'paid'")
+    cur.execute("SELECT COALESCE(SUM(amount), 0) FROM monthly_payments WHERE status = 'paid'")
     total_monthly = cur.fetchone()[0]
-    cur.execute(f"SELECT COALESCE(SUM(amount), 0) FROM other_incomes")
+    cur.execute("SELECT COALESCE(SUM(amount), 0) FROM other_incomes")
     total_other_incomes = cur.fetchone()[0]
-    cur.execute(f"SELECT COALESCE(SUM(amount), 0) FROM expenses")
+    cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses")
     total_expenses = cur.fetchone()[0]
     balance = total_monthly + total_other_incomes - total_expenses
 
-    cur.execute(f'''SELECT mp.*, c.first_name, c.last_name, p.name as plan_name
+    cur.execute('''SELECT mp.*, c.first_name, c.last_name, p.name as plan_name
         FROM monthly_payments mp JOIN clients c ON mp.client_id = c.id
         LEFT JOIN plans p ON c.plan_id = p.id ORDER BY mp.payment_date DESC''')
     monthly_payments = cur.fetchall()
@@ -402,16 +429,10 @@ def finances():
     other_incomes = cur.fetchall()
     cur.execute('SELECT * FROM expenses ORDER BY expense_date DESC')
     expenses = cur.fetchall()
-    cur.execute('SELECT category, SUM(amount) FROM other_incomes GROUP BY category')
-    income_by_category = cur.fetchall()
-    cur.execute('SELECT category, SUM(amount) FROM expenses GROUP BY category')
-    expense_by_category = cur.fetchall()
-
     conn.close()
     return render_template('finances.html', total_monthly=total_monthly, total_other_incomes=total_other_incomes,
                          total_expenses=total_expenses, balance=balance, monthly_payments=monthly_payments,
-                         other_incomes=other_incomes, expenses=expenses, income_by_category=income_by_category,
-                         expense_by_category=expense_by_category)
+                         other_incomes=other_incomes, expenses=expenses)
 
 @app.route('/finances/payment/new', methods=['GET', 'POST'])
 @login_required

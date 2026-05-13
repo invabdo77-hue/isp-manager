@@ -1,6 +1,7 @@
 {
   "name": "isp-manager",
   "version": 2,
+  "region": "us-west2",
   "database": {
     "addons": [
       {
